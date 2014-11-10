@@ -1,6 +1,7 @@
 package edu.swarthmore.cs.lab3.requesttest;
 
 import android.app.Activity;
+import android.nfc.Tag;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.Menu;
@@ -35,31 +36,70 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
 
+import android.widget.AdapterView;
+import android.widget.ArrayAdapter;
+import android.widget.Button;
+import android.widget.EditText;
+import android.widget.Spinner;
+
 
 public class RequestTest extends Activity {
 
-    private Button mRequestButton;
+    private Spinner mDeviceTypeSpinner;
+    private String mDeviceType;
+    private EditText mUserIDText;
+    private Button mMakeRequestButton;
     private TextView mRequestResponse;
+
+    private static final String TAG = "QuizActivity";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        Log.d(TAG, "onCreate(savedInstanceState) called");
         setContentView(R.layout.activity_request_test);
 
-        // Find buttons and TextViews
-        mRequestButton = (Button) findViewById(R.id.request_button);
-        mRequestResponse = (TextView) findViewById(R.id.request_response);
+        mRequestResponse = (TextView) findViewById(R.id.response_text);
+        mUserIDText = (EditText) findViewById(R.id.user_id);
+        mMakeRequestButton = (Button) findViewById(R.id.make_request_button);
 
-        // Button listeners
-        mRequestButton.setOnClickListener(new View.OnClickListener() {
+        mDeviceTypeSpinner = (Spinner) findViewById(R.id.device_type_spinner);
+        // Create an ArrayAdapter using the string array and a default spinner layout
+        ArrayAdapter<CharSequence> adapter = ArrayAdapter.createFromResource(this,
+                R.array.device_array, android.R.layout.simple_spinner_item);
+        // Specify the layout to use when the list of choices appears
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        // Apply the adapter to the spinner
+        mDeviceTypeSpinner.setAdapter(adapter);
+
+        mDeviceTypeSpinner.setOnItemSelectedListener( new AdapterView.OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                mDeviceType = parent.getItemAtPosition(position).toString();
+                String msg = mDeviceType;
+                Log.d(TAG, msg);
+            }
+
+            @Override
+            public void onNothingSelected(AdapterView<?> parent) {
+                mDeviceType = null;
+                String msg = mDeviceType;
+                Log.d(TAG, msg);
+            }
+        });
+
+        mMakeRequestButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                makeRequest();
+                makeRequest(mDeviceType, mUserIDText.getText().toString());
             }
         });
     }
 
-    private void makeRequest() {
+    private void makeRequest(String deviceType, String userId) {
+        String msg = "device type: " + deviceType + " | userId: " + userId;
+        Log.d(TAG, msg);
+        // TODO: build url with the info
         RequestClient client = new RequestClient();
         String response = null;
         try {
