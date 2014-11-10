@@ -2,7 +2,18 @@
 <resources>
 
     <string name="app_name">RequestTest</string>
-    <string name="hello_world">Hello world!</string>
     <string name="action_settings">Settings</string>
+    <string name="user_id">Enter User ID</string>
+    <string name="make_request_button">Make Request!</string>
+    <string name="device_type_header">Device Type</string>
+    <string name="username_header">Username</string>
+    <string-array name="device_array">
+        <item>Fitbit</item>
+        <item>Fat Secret</item>
+        <item>Microsoft HealthVault</item>
+        <item>Jawbone UP</item>
+        <item>RunKeeper</item>
+        <item>Withings</item>
+    </string-array>
 
 </resources>
