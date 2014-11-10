@@ -4,5 +4,8 @@
     <string name="app_name">RequestTest</string>
     <string name="hello_world">Hello world!</string>
     <string name="action_settings">Settings</string>
+    <string name="request_button">Make Request</string>
+    <string name="request_text">Press this button to query the mHealth server.</string>
+
 
 </resources>
