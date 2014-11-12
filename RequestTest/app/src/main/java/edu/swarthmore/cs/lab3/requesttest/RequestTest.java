@@ -22,6 +22,7 @@ import org.apache.http.impl.client.DefaultHttpClient;
 import org.apache.http.message.BasicNameValuePair;
 import org.apache.http.protocol.RequestConnControl;
 import org.json.JSONArray;
+import org.json.JSONObject;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedReader;
@@ -33,6 +34,7 @@ import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
 
@@ -103,13 +105,35 @@ public class RequestTest extends Activity {
         RequestClient client = new RequestClient();
         String response = null;
         try {
-            response = client.execute("http://130.58.68.129:8083/data/fitbit/steps?username=superdock&dateStart=2014-10-20&dateEnd=2014-10-22").get();
+            response = client.execute("http://130.58.68.129:8083/data/fitbit/blood_glucose?username=superdock&dateStart=2014-10-20&dateEnd=2014-10-22&normalize=true").get();
         } catch (InterruptedException e) {
             response = "Interrupted Exception caught.";
         } catch (ExecutionException e) {
             response = "Execution Exception caught.";
         }
-        mRequestResponse.setText(response);
+        processRequest(response);
+        //mRequestResponse.setText(response);
+
+    }
+
+    public void processRequest(String response){
+        try {
+
+            JSONObject obj = new JSONObject(response);
+
+            JSONObject body = obj.getJSONObject("body");
+            JSONArray blood_glucose = body.getJSONArray("blood_glucose");
+            JSONObject entry = blood_glucose.getJSONObject(0);
+            Iterator<String> fields = entry.keys();
+            fields.next();
+            mRequestResponse.setText(entry.getString(fields.next()));
+
+            Log.d("My App", obj.toString());
+
+        } catch (Throwable t) {
+            Log.e("My App", "Could not parse malformed JSON: \"" + response + "\"");
+        }
+
     }
 
     @Override
