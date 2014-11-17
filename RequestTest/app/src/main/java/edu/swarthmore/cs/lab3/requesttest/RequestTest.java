@@ -34,8 +34,10 @@ import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
+import java.util.MissingResourceException;
 import java.util.concurrent.ExecutionException;
 
 import android.widget.AdapterView;
@@ -105,7 +107,7 @@ public class RequestTest extends Activity {
         RequestClient client = new RequestClient();
         String response = null;
         try {
-            response = client.execute("http://130.58.68.129:8083/data/fitbit/blood_glucose?username=superdock&dateStart=2014-10-20&dateEnd=2014-10-22&normalize=true").get();
+            response = client.execute("http://130.58.68.129:8083/data/fitbit/blood_glucose?username=superdock&dateStart=2014-10-22&dateEnd=2014-10-22&normalize=true").get();
         } catch (InterruptedException e) {
             response = "Interrupted Exception caught.";
         } catch (ExecutionException e) {
@@ -117,23 +119,67 @@ public class RequestTest extends Activity {
     }
 
     public void processRequest(String response){
+        JSONObject temp;
+        Date date = new Date();
         try {
 
             JSONObject obj = new JSONObject(response);
 
             JSONObject body = obj.getJSONObject("body");
-            JSONArray blood_glucose = body.getJSONArray("blood_glucose");
-            JSONObject entry = blood_glucose.getJSONObject(0);
-            Iterator<String> fields = entry.keys();
-            fields.next();
-            mRequestResponse.setText(entry.getString(fields.next()));
+            Iterator<String> field_name_iterator = body.keys();
+            String field_name = field_name_iterator.next();
+            Log.d(TAG, "Field_name: " + field_name);
+            //extract field name as string from key in body
+            //get JSON array from body using field_name
+            JSONArray data_array = body.getJSONArray(field_name);
+            //once we get array, iterate through list of entries
+            for(int i = 0; i<data_array.length(); i++){
+                temp = data_array.getJSONObject(i);
+                create_table(date, field_name, temp, i);
+            }
+            //JSONObject entry = data_array.getJSONObject(0);
+            //Iterator<String> fields = entry.keys();
+            //String key = fields.next();
+            //JSONObject levelone = entry.getJSONObject(key);
+            //mRequestResponse.setText(level1.toString());
+            //Iterator<String> fields2 = levelone.keys();
+            //String key2 = fields2.next();
+            //if (levelone.get(key2) instanceof JSONObject){
+                //mRequestResponse.setText("true");
+            //}else {
+                //mRequestResponse.setText(levelone.get(key2).toString());
+            //}
+            //mRequestResponse.setText(field_name);
 
-            Log.d("My App", obj.toString());
+            Log.d("My App", field_name);
 
         } catch (Throwable t) {
             Log.e("My App", "Could not parse malformed JSON: \"" + response + "\"");
         }
 
+    }
+
+    public void add_data_entry(Date date, String field_name, String value, int date_num){
+        String message = "field name: " + field_name +"\nvalue: " + value + "\ndate_num: " + date_num;
+        Log.i(TAG, message);
+    }
+
+    public void create_table(Date date, String field_name, JSONObject entry, int entry_num){
+        Iterator<String> fields = entry.keys();
+        String curr_key;
+        while(fields.hasNext()){
+            curr_key = fields.next();
+            try {
+                if (entry.get(curr_key) instanceof JSONObject) {
+                    create_table(date, field_name+ "$"+curr_key, entry.getJSONObject(curr_key), entry_num);
+                } else {
+                    add_data_entry(date, field_name + "$"+curr_key, entry.getString(curr_key), entry_num);
+                }
+            } catch (Throwable t){
+                Log.e("My App", "Could not parse malformed JSON: \"" + entry + "\"");
+            }
+        }
+        return;
     }
 
     @Override
