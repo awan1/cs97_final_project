@@ -3,7 +3,6 @@ package edu.swarthmore.cs.lab3.requesttest;
 import android.app.Activity;
 import android.content.ContentValues;
 import android.database.sqlite.SQLiteDatabase;
-import android.nfc.Tag;
 import android.os.Bundle;
 import android.text.method.ScrollingMovementMethod;
 import android.util.Log;
@@ -13,38 +12,15 @@ import android.view.View;
 import android.widget.Button;
 import android.widget.TextView;
 
-import org.apache.http.HttpResponse;
-import org.apache.http.HttpStatus;
-import org.apache.http.NameValuePair;
-import org.apache.http.client.ClientProtocolException;
-import org.apache.http.client.HttpClient;
-import org.apache.http.client.entity.UrlEncodedFormEntity;
-import org.apache.http.client.methods.HttpGet;
-import org.apache.http.client.methods.HttpPost;
-import org.apache.http.impl.client.DefaultHttpClient;
-import org.apache.http.message.BasicNameValuePair;
-import org.apache.http.protocol.RequestConnControl;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
-import java.io.BufferedInputStream;
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.io.UnsupportedEncodingException;
-import java.net.HttpURLConnection;
-import java.net.MalformedURLException;
-import java.net.URL;
-import java.util.ArrayList;
 import java.util.Date;
-import java.util.Dictionary;
-import java.util.List;
+import java.util.Iterator;
 import java.util.concurrent.ExecutionException;
 
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
-import android.widget.Button;
 import android.widget.EditText;
 import android.widget.Spinner;
 
@@ -67,6 +43,7 @@ public class RequestTest extends Activity {
         setContentView(R.layout.activity_request_test);
 
         // Get the SQL database interface
+
         mDbHelper = new DSUDbHelper(RequestTest.this);
 
         // Find components
@@ -110,6 +87,11 @@ public class RequestTest extends Activity {
         });
     }
 
+    /**
+     * Helper function to make the request to the server.
+     * @param deviceType The wearable to query data for
+     * @param userId The user ID
+     */
     private void makeRequest(String deviceType, String userId) {
         String msg = "device type: " + deviceType + " | userId: " + userId;
         Log.d(TAG, msg);
@@ -117,26 +99,85 @@ public class RequestTest extends Activity {
         RequestClient client = new RequestClient();
         String response = null;
         try {
-            response = client.execute("http://130.58.68.129:8083/data/fitbit/blood_glucose?username=superdock&dateStart=2014-10-18&dateEnd=2014-10-22").get();
+            response = client.execute("http://130.58.68.129:8083/data/fitbit/blood_glucose?username=superdock&dateStart=2014-10-22&dateEnd=2014-10-22&normalize=true").get();
         } catch (InterruptedException e) {
             response = "Interrupted Exception caught.";
         } catch (ExecutionException e) {
             response = "Execution Exception caught.";
         }
-        processResponse(response);
+        Log.i(TAG, "Response: " + response);
+        processRequest(response);
     }
 
-    private void processResponse(String response) {
-        // Convert string to JSON
+    /**
+     * Helper function that processes a response from a shim server request. The response is a
+     * JSON Object with various fields and headers; we process it out into key-value pairs and
+     * enter them in a database. Various helper functions are used to this end.
+     *
+     * @param response the response from a data query. Expect it to be parseable into a JSON Object.
+     */
+    private void processRequest(String response){
+        JSONObject temp;
+        Date date = new Date();
+        String MAIN_KEY = "body";  // The main key in the JSON response
         try {
-            JSONObject jsonResponse = new JSONObject(response);
+
+            JSONObject obj = new JSONObject(response);
+
+            JSONObject body = obj.getJSONObject(MAIN_KEY);
+            Iterator<String> field_name_iterator = body.keys();
+            String fieldName = field_name_iterator.next();
+            Log.d(TAG, "Field_name: " + fieldName);
+            //extract field name as string from key in body
+            //get JSON array from body using fieldName
+            JSONArray dataArray = body.getJSONArray(fieldName);
+            //once we get array, iterate through list of entries
+            for(int i = 0; i< dataArray.length(); i++){
+                temp = dataArray.getJSONObject(i);
+                createTable(date, i, fieldName, fieldName, temp);
+            }
+
+            Log.d(TAG, "Processed field " + fieldName);
+
+            // For now, print out the new table
+            // Get the database
+            SQLiteDatabase db = mDbHelper.getReadableDatabase();
+            mRequestResponse.setText(mDbHelper.getTableAsString(db, fieldName));
 
         } catch (Throwable t) {
-            Log.e(TAG, "Malformed JSON: " + response);
+            Log.e(TAG, "Error in processRequest while parsing: \"" + response + "\": " + t.toString());
+            t.printStackTrace();
         }
+    }
 
-        mRequestResponse.setText(response);
-
+    /**
+     * A recursive function that constructs an
+     * TODO finish this documentation. also, rename function to be more understandable? (I'm not
+     *   sure what table we're referring to)
+     * TODO remove the first redundant fieldname - we get field name: blood_glucose$blood_glucose$value
+     *   but we want just blood_glucose$value
+     *
+     * @param date
+     * @param fieldName
+     * @param entry
+     * @param entryNum
+     */
+    private void createTable(Date date, int entryNum, String tableName, String fieldName, JSONObject entry){
+        Iterator<String> fields = entry.keys();
+        String currKey;
+        while(fields.hasNext()){
+            currKey = fields.next();
+            try {
+                if (entry.get(currKey) instanceof JSONObject) {
+                    createTable(date, entryNum, tableName, fieldName + "$" + currKey, entry.getJSONObject(currKey));
+                } else {
+                    updateTable(date, entryNum, tableName, fieldName + "$" + currKey, entry.getString(currKey));
+                }
+            } catch (Throwable t){
+                Log.e(TAG, "Error in createTable while parsing: \"" + entry + "\": " + t.toString());
+                t.printStackTrace();
+            }
+        }
     }
 
     /**
@@ -153,6 +194,10 @@ public class RequestTest extends Activity {
      */
     private long updateTable(Date date, int entryNum, String tableName,
                              String fieldName, String value) {
+
+        String message = "field name: " + fieldName +"\nvalue: " + value + "\nentryNum: " + entryNum;
+        Log.i(TAG, message);
+
         boolean valueIsDouble = false;
         double value_double = -1;
         // Try to make value a double, otherwise just keep it as a string
@@ -181,12 +226,7 @@ public class RequestTest extends Activity {
         return newRowId;
     }
 
-    /**
-     * Helper function that prints out the SQL database.
-     */
-    private void printTable() {
 
-    }
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {

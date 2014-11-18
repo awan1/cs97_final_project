@@ -6,6 +6,9 @@ import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteException;
 import android.database.sqlite.SQLiteOpenHelper;
+import android.widget.ArrayAdapter;
+
+import java.util.ArrayList;
 
 /**
  * Created by awan1 on 11/17/14.
@@ -111,5 +114,23 @@ public class DSUDbHelper extends SQLiteOpenHelper {
                 DSUDbContract.TableEntry.COLUMN_NAME_DATE + " " + DSUDbContract.TableEntry.COLUMN_TYPE_DATE + ", " +
                 DSUDbContract.TableEntry.COLUMN_NAME_ENTRYNUM + " " + DSUDbContract.TableEntry.COLUMN_TYPE_ENTRYNUM + ")";
         db.execSQL(command);
+    }
+
+    /**
+     * Helper function that parses a given table into a string and returns it for easy printing.
+     *
+     * @param db the database to get the table from
+     * @param tableName the the name of the table to parse
+     * @return the table tableName as a string
+     */
+    public String getTableAsString(SQLiteDatabase db, String tableName) {
+        String tableString = "";
+        Cursor allRows  = db.rawQuery("SELECT * FROM "+  tableName, null);
+        allRows.moveToFirst();
+        while(allRows.moveToNext()){
+            String name= allRows.getString(allRows.getColumnIndex("NAME"));
+            tableString = tableString + name + "\n";
+        }
+        return tableString;
     }
 }
