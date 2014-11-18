@@ -6,6 +6,7 @@ import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteException;
 import android.database.sqlite.SQLiteOpenHelper;
+import android.util.Log;
 import android.widget.ArrayAdapter;
 
 import java.util.ArrayList;
@@ -19,8 +20,8 @@ public class DSUDbHelper extends SQLiteOpenHelper {
     private static int DATABASE_VERSION = 1;
     public static final String DATABASE_NAME = "DSUData.db";
 
-    private static final String SQL_DELETE_ENTRIES =
-            "DROP TABLE IF EXISTS *";
+
+    private static final String TAG = "DSUDbHelper";
 
     public DSUDbHelper(Context context) {
         super(context, DATABASE_NAME, null, DATABASE_VERSION);
@@ -70,6 +71,8 @@ public class DSUDbHelper extends SQLiteOpenHelper {
      */
     public long addItem(SQLiteDatabase db, String tableName, String fieldName, ContentValues values,
                         boolean valueIsDouble) {
+        Log.d(TAG, "addItem called");
+
         // Create the table if it doesn't exist
         createTableIfNotExisting(db, tableName);
 
@@ -87,6 +90,7 @@ public class DSUDbHelper extends SQLiteOpenHelper {
                 value_type = DSUDbContract.TableEntry.DEFAULT_ENTRY_TYPE;
             }
             String command = "ALTER TABLE " + tableName + " ADD COLUMN " + fieldName + " " + value_type;
+            Log.d(TAG, "addItem: command "+command);
             db.execSQL(command);
         } finally {
             // Add the entry to the table
@@ -109,28 +113,41 @@ public class DSUDbHelper extends SQLiteOpenHelper {
      * @param tableName the name of the table to create
      */
     private void createTableIfNotExisting(SQLiteDatabase db, String tableName) {
-        String command = "CREATE TABLE IF NOT EXISTS " + tableName + " (" +
-                DSUDbContract.TableEntry._ID + " INTEGER PRIMARY KEY, " +
-                DSUDbContract.TableEntry.COLUMN_NAME_DATE + " " + DSUDbContract.TableEntry.COLUMN_TYPE_DATE + ", " +
-                DSUDbContract.TableEntry.COLUMN_NAME_ENTRYNUM + " " + DSUDbContract.TableEntry.COLUMN_TYPE_ENTRYNUM + ")";
+        String command = "CREATE TABLE IF NOT EXISTS %s (%s INTEGER PRIMARY KEY, %s %s, %s %s)".
+                format(tableName, DSUDbContract.TableEntry._ID,
+                        DSUDbContract.TableEntry.COLUMN_NAME_DATE,
+                        DSUDbContract.TableEntry.COLUMN_TYPE_DATE,
+                        DSUDbContract.TableEntry.COLUMN_NAME_ENTRYNUM,
+                        DSUDbContract.TableEntry.COLUMN_TYPE_ENTRYNUM);
+        Log.d(TAG, "createTableIfNotExisting: command "+command);
         db.execSQL(command);
     }
 
     /**
      * Helper function that parses a given table into a string and returns it for easy printing.
+     * The string consists of the table name and then each row is iterated through with
+     * column_name: value pairs printed out.
      *
      * @param db the database to get the table from
      * @param tableName the the name of the table to parse
      * @return the table tableName as a string
      */
     public String getTableAsString(SQLiteDatabase db, String tableName) {
-        String tableString = "";
-        Cursor allRows  = db.rawQuery("SELECT * FROM "+  tableName, null);
-        allRows.moveToFirst();
-        while(allRows.moveToNext()){
-            String name= allRows.getString(allRows.getColumnIndex("NAME"));
-            tableString = tableString + name + "\n";
+        Log.d(TAG, "getTableAsString called");
+        String tableString = String.format("Table %s:\n", tableName);
+        Cursor allRows  = db.rawQuery("SELECT * FROM " + tableName, null);
+        if (allRows.moveToFirst() ){
+            String[] columnNames = allRows.getColumnNames();
+            do {
+                for (String name: columnNames) {
+                    tableString += String.format("%s: %s\n", name,
+                            allRows.getString(allRows.getColumnIndex(name)));
+                }
+                tableString += "\n";
+
+            } while (allRows.moveToNext());
         }
+
         return tableString;
     }
 }

@@ -17,8 +17,8 @@ public class DSUDbContract {
     public static abstract class TableEntry implements BaseColumns {
         public static final String COLUMN_NAME_DATE = "Date";
         public static final String COLUMN_NAME_ENTRYNUM = "Entrynum";
-        public static final String COLUMN_TYPE_DATE = "DATETIME";
-        public static final String COLUMN_TYPE_ENTRYNUM = "INT";
+        public static final String COLUMN_TYPE_DATE = "TEXT"; // "DATETIME";
+        public static final String COLUMN_TYPE_ENTRYNUM = "INTEGER";
 
         public static final String DEFAULT_ENTRY_TYPE = "TEXT";
     }

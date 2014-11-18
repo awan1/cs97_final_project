@@ -24,6 +24,8 @@ import android.widget.ArrayAdapter;
 import android.widget.EditText;
 import android.widget.Spinner;
 
+import junit.framework.Test;
+
 
 public class RequestTest extends Activity {
 
@@ -34,7 +36,7 @@ public class RequestTest extends Activity {
     private TextView mRequestResponse;
     private DSUDbHelper mDbHelper;
 
-    private static final String TAG = "QuizActivity";
+    private static final String TAG = "RequestTest";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -97,16 +99,27 @@ public class RequestTest extends Activity {
         Log.d(TAG, msg);
         // TODO: build url with the info
         RequestClient client = new RequestClient();
-        String response = null;
-        try {
-            response = client.execute("http://130.58.68.129:8083/data/fitbit/blood_glucose?username=superdock&dateStart=2014-10-22&dateEnd=2014-10-22&normalize=true").get();
-        } catch (InterruptedException e) {
-            response = "Interrupted Exception caught.";
-        } catch (ExecutionException e) {
-            response = "Execution Exception caught.";
+        String response = "";
+        if (deviceType.equals("Test")) {
+            response = getTestResponse();
+        }
+        else {
+            try {
+                response = client.execute("http://130.58.68.129:8083/data/fitbit/blood_glucose?username=superdock&dateStart=2014-10-21&dateEnd=2014-10-22&normalize=true").get();
+            } catch (InterruptedException e) {
+                response = "Interrupted Exception caught.";
+            } catch (ExecutionException e) {
+                response = "Execution Exception caught.";
+            }
+
         }
         Log.i(TAG, "Response: " + response);
         processRequest(response);
+    }
+
+    private String getTestResponse() {
+        String response = "{'body': {'value': 0, 'units': 'number'}}";
+        return response;
     }
 
     /**
@@ -137,7 +150,7 @@ public class RequestTest extends Activity {
                 createTable(date, i, fieldName, fieldName, temp);
             }
 
-            Log.d(TAG, "Processed field " + fieldName);
+            Log.d(TAG, "processRequest: processed field " + fieldName);
 
             // For now, print out the new table
             // Get the database
@@ -196,7 +209,7 @@ public class RequestTest extends Activity {
                              String fieldName, String value) {
 
         String message = "field name: " + fieldName +"\nvalue: " + value + "\nentryNum: " + entryNum;
-        Log.i(TAG, message);
+        Log.i(TAG, "updateTable: " + message);
 
         boolean valueIsDouble = false;
         double value_double = -1;
