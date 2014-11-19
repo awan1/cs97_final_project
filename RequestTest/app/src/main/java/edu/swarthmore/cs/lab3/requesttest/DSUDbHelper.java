@@ -9,6 +9,7 @@ import android.database.sqlite.SQLiteOpenHelper;
 import android.util.Log;
 import android.widget.ArrayAdapter;
 
+import java.text.MessageFormat;
 import java.util.ArrayList;
 
 /**
@@ -113,12 +114,25 @@ public class DSUDbHelper extends SQLiteOpenHelper {
      * @param tableName the name of the table to create
      */
     private void createTableIfNotExisting(SQLiteDatabase db, String tableName) {
-        String command = "CREATE TABLE IF NOT EXISTS %s (%s INTEGER PRIMARY KEY, %s %s, %s %s)".
-                format(tableName, DSUDbContract.TableEntry._ID,
-                        DSUDbContract.TableEntry.COLUMN_NAME_DATE,
-                        DSUDbContract.TableEntry.COLUMN_TYPE_DATE,
-                        DSUDbContract.TableEntry.COLUMN_NAME_ENTRYNUM,
-                        DSUDbContract.TableEntry.COLUMN_TYPE_ENTRYNUM);
+        /*
+        String command = String.format(
+                "CREATE TABLE IF NOT EXISTS %s (%s INTEGER PRIMARY KEY, %s %s, %s %s)",
+                tableName,
+                DSUDbContract.TableEntry._ID,
+                DSUDbContract.TableEntry.COLUMN_NAME_DATE,
+                DSUDbContract.TableEntry.COLUMN_TYPE_DATE,
+                DSUDbContract.TableEntry.COLUMN_NAME_ENTRYNUM,
+                DSUDbContract.TableEntry.COLUMN_TYPE_ENTRYNUM
+        );
+        */
+        String command = MessageFormat.format(
+                "CREATE TABLE IF NOT EXISTS {0} ({1} {2}, {3} {4}, PRIMARY KEY ({1}, {3}))",
+                tableName,
+                DSUDbContract.TableEntry.COLUMN_NAME_DATE,
+                DSUDbContract.TableEntry.COLUMN_TYPE_DATE,
+                DSUDbContract.TableEntry.COLUMN_NAME_ENTRYNUM,
+                DSUDbContract.TableEntry.COLUMN_TYPE_ENTRYNUM
+        );
         Log.d(TAG, "createTableIfNotExisting: command "+command);
         db.execSQL(command);
     }

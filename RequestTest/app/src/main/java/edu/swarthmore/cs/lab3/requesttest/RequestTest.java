@@ -2,7 +2,9 @@ package edu.swarthmore.cs.lab3.requesttest;
 
 import android.app.Activity;
 import android.content.ContentValues;
+import android.content.Context;
 import android.database.sqlite.SQLiteDatabase;
+import android.database.sqlite.SQLiteException;
 import android.os.Bundle;
 import android.text.method.ScrollingMovementMethod;
 import android.util.Log;
@@ -15,6 +17,7 @@ import android.widget.TextView;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
+import java.sql.SQLException;
 import java.util.Date;
 import java.util.Iterator;
 import java.util.concurrent.ExecutionException;
@@ -45,8 +48,8 @@ public class RequestTest extends Activity {
         setContentView(R.layout.activity_request_test);
 
         // Get the SQL database interface
-
-        mDbHelper = new DSUDbHelper(RequestTest.this);
+        Context myContext = RequestTest.this;
+        mDbHelper = new DSUDbHelper(myContext);
 
         // Find components
         mRequestResponse = (TextView) findViewById(R.id.response_text);
@@ -258,5 +261,18 @@ public class RequestTest extends Activity {
             return true;
         }
         return super.onOptionsItemSelected(item);
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        // Wipe the database that was created. In production code we'd probably want to write
+        // the database instead, but for testing we want to make it a clean slate.
+        try {
+            SQLiteDatabase db = mDbHelper.getWritableDatabase();
+            db.close();
+        } catch (SQLiteException e) {
+            // Do nothing
+        }
     }
 }
