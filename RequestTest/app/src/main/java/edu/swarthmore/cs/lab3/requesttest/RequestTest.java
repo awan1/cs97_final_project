@@ -15,6 +15,10 @@ import android.widget.TextView;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.Date;
 import java.util.Iterator;
 import java.util.concurrent.ExecutionException;
@@ -97,28 +101,116 @@ public class RequestTest extends Activity {
     private void makeRequest(String deviceType, String userId) {
         String msg = "device type: " + deviceType + " | userId: " + userId;
         Log.d(TAG, msg);
+
+        String dateStart = "2014-01-01";
+        String dateEnd = "2014-01-07";
+
         // TODO: build url with the info
+        //RequestClient client = new RequestClient();
+        //String response = "";
+        //if (deviceType.equals("Test")) {
+        //    response = getTestResponse();
+        //}
+
+        //else {
+        //    try {
+        //        //String dateStart = "2014-01-01";
+        //        //String dateEnd = "2014-01-01";
+        //        //response = client.execute("http://130.58.68.129:8083/data/fitbit/blood_glucose?username=superdock&dateStart=" + dateStart + "&dateEnd=" + dateEnd + "&normalize=true").get();
+        //    } catch (InterruptedException e) {
+        //        response = "Interrupted Exception caught.";
+        //    } catch (ExecutionException e) {
+        //        response = "Execution Exception caught.";
+        //    }
+
+        //}
+        //Log.i(TAG, "Response: " + response);
+        makeRequestByDate(deviceType, userId, dateStart, dateEnd);
+    }
+
+    private void makeRequestByDate(String deviceType, String userId, String dateStart, String dateEnd) {
         RequestClient client = new RequestClient();
+        //RequestClient client = new RequestClient();
         String response = "";
-        if (deviceType.equals("Test")) {
-            response = getTestResponse();
-        }
-        else {
+        ArrayList<String> dates = getDates(dateStart, dateEnd);
+        for (int i = 0; i < dates.size(); i++) {
+            String date = dates.get(i);
             try {
-                response = client.execute("http://130.58.68.129:8083/data/fitbit/blood_glucose?username=superdock&dateStart=2014-10-21&dateEnd=2014-10-22&normalize=true").get();
+                new Thread(new Runnable() {
+                    public void run() {
+                        RequestClient client = new RequestClient();
+                        String response = client.execute("http://130.58.68.129:8083/data/fitbit/blood_glucose?username=superdock&dateStart=" + date + "&dateEnd=" + date + "&normalize=true").get();
+                        processRequest(response, date);
+                    }
+                });
             } catch (InterruptedException e) {
+                //TODO: handle exception
                 response = "Interrupted Exception caught.";
             } catch (ExecutionException e) {
                 response = "Execution Exception caught.";
             }
-
         }
-        Log.i(TAG, "Response: " + response);
-        processRequest(response);
+    }
+
+    private ArrayList<String> getDates(String dateStart, String dateEnd){
+
+        String date = dateStart;
+        ArrayList<String> dates = new ArrayList<String>();
+        dates.add(dateStart);
+        while (true) {
+            String msg = "date: " + date;
+            Log.i(TAG, msg);
+            SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
+            Calendar c = Calendar.getInstance();
+            try {
+                c.setTime(sdf.parse(date));
+            } catch (ParseException e) {
+                //TODO: handle exception
+                break;
+            }
+            c.add(Calendar.DATE, 1);  // number of days to add
+            date = sdf.format(c.getTime());  // dt is now the new date
+            dates.add(date);
+            if (date.equals(dateEnd)){
+                break;
+            }
+        }
+        return dates;
     }
 
     private String getTestResponse() {
-        String response = "{'body': {'value': 0, 'units': 'number'}}";
+        String response = " {'shim': null," +
+        " 'timeStamp': 1416423277," +
+        " 'body': {" +
+            " 'blood_glucose': [" +
+            " { " +
+                " 'blood_glucose': {" +
+                " 'value': 0, " +
+                        " 'unit': 'mg/dL'" +
+            " }," +
+                " 'effective_time_frame': {" +
+                " 'date_time': '2014-11-20T00:00:00.000Z'" +
+            " }" +
+            " }," +
+            " { " +
+                " 'blood_glucose': { " +
+                " 'value': 0," +
+                        " 'unit': 'mg/dL' " +
+            " }," +
+                " 'effective_time_frame': {" +
+                " 'date_time': '2014-11-20T00:00:00.000Z'" +
+            " }" +
+            " }," +
+            " {" +
+                " 'blood_glucose': {" +
+                " 'value': 0," +
+                        "'unit': 'mg/dL'" +
+            "}, " +
+                " 'effective_time_frame': {" +
+                " 'date_time': '2014-11-20T00:00:00.000Z'}" +
+            "}" +
+            "]" +
+        "}}";
         return response;
     }
 
@@ -129,9 +221,16 @@ public class RequestTest extends Activity {
      *
      * @param response the response from a data query. Expect it to be parseable into a JSON Object.
      */
-    private void processRequest(String response){
+    private void processRequest(String response, String dateString){
         JSONObject temp;
-        Date date = new Date();
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
+        sdf.setLenient(false);
+        Date date = null;
+        try {
+            date = sdf.parse(dateString);
+        } catch (ParseException e) {
+            date = new Date();
+        }
         String MAIN_KEY = "body";  // The main key in the JSON response
         try {
 
@@ -147,7 +246,7 @@ public class RequestTest extends Activity {
             //once we get array, iterate through list of entries
             for(int i = 0; i< dataArray.length(); i++){
                 temp = dataArray.getJSONObject(i);
-                createTable(date, i, fieldName, fieldName, temp);
+                createTableEntry(date, i, fieldName, fieldName, temp);
             }
 
             Log.d(TAG, "processRequest: processed field " + fieldName);
@@ -175,16 +274,16 @@ public class RequestTest extends Activity {
      * @param entry
      * @param entryNum
      */
-    private void createTable(Date date, int entryNum, String tableName, String fieldName, JSONObject entry){
+    private void createTableEntry(Date date, int entryNum, String tableName, String fieldName, JSONObject entry){
         Iterator<String> fields = entry.keys();
         String currKey;
         while(fields.hasNext()){
             currKey = fields.next();
             try {
                 if (entry.get(currKey) instanceof JSONObject) {
-                    createTable(date, entryNum, tableName, fieldName + "$" + currKey, entry.getJSONObject(currKey));
+                    createTableEntry(date, entryNum, tableName, fieldName + "$" + currKey, entry.getJSONObject(currKey));
                 } else {
-                    updateTable(date, entryNum, tableName, fieldName + "$" + currKey, entry.getString(currKey));
+                    insertInTable(date, entryNum, tableName, fieldName + "$" + currKey, entry.getString(currKey));
                 }
             } catch (Throwable t){
                 Log.e(TAG, "Error in createTable while parsing: \"" + entry + "\": " + t.toString());
@@ -205,7 +304,7 @@ public class RequestTest extends Activity {
      * @param value: the value of the cell to be altered as a string.
      * @return the row ID that the value was inserted into
      */
-    private long updateTable(Date date, int entryNum, String tableName,
+    private long insertInTable(Date date, int entryNum, String tableName,
                              String fieldName, String value) {
 
         String message = "field name: " + fieldName +"\nvalue: " + value + "\nentryNum: " + entryNum;
