@@ -17,7 +17,6 @@ import android.widget.TextView;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
-import java.sql.SQLException;
 import java.util.Date;
 import java.util.Iterator;
 import java.util.concurrent.ExecutionException;
@@ -26,8 +25,6 @@ import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.EditText;
 import android.widget.Spinner;
-
-import junit.framework.Test;
 
 
 public class RequestTest extends Activity {
@@ -230,8 +227,8 @@ public class RequestTest extends Activity {
         String dateString = date.toString();
 
         ContentValues values = new ContentValues();
-        values.put(DSUDbContract.TableEntry.COLUMN_NAME_DATE, dateString);
-        values.put(DSUDbContract.TableEntry.COLUMN_NAME_ENTRYNUM, entryNum);
+        values.put(DSUDbContract.TableEntry.DATE_COLUMN_NAME, dateString);
+        values.put(DSUDbContract.TableEntry.ENTRYNUM_COLUMN_NAME, entryNum);
         if (valueIsDouble) {
             values.put(fieldName, value_double);
         } else {
