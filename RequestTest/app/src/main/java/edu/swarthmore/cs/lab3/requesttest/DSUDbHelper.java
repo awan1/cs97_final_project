@@ -19,7 +19,6 @@ public class DSUDbHelper extends SQLiteOpenHelper {
     private static int DATABASE_VERSION = 1;
     public static final String DATABASE_NAME = "DSUData.db";
 
-
     private static final String TAG = "DSUDbHelper";
 
     public DSUDbHelper(Context context) {

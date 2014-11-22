@@ -16,5 +16,9 @@
         <item>RunKeeper</item>
         <item>Withings</item>
     </string-array>
+    <string name="view_button">View Database</string>
+    <string name="import_button">Import DSUs</string>
+    <string name="export_button">Export Database</string>
+    <string name="visualize_button">Create Visualizations</string>
 
 </resources>
