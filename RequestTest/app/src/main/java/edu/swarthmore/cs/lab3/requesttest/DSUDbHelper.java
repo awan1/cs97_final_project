@@ -93,7 +93,27 @@ public class DSUDbHelper extends SQLiteOpenHelper {
             db.execSQL(command);
         } finally {
             // Add the entry to the table
-            long newRowId = db.insert(tableName, fieldName, values);
+//            long newRowId = db.insert(tableName, fieldName, values);
+            // Try to insert. If it fails, it means that there was a conflict, so use update instead.
+//            long insertRetValue = db.insertWithOnConflict(tableName, null, values, SQLiteDatabase.CONFLICT_ROLLBACK);
+
+            // Find the row of our table.
+            String date_col = DSUDbContract.TableEntry.DATE_COLUMN_NAME;
+            String entrynum_col = DSUDbContract.TableEntry.ENTRYNUM_COLUMN_NAME;
+            String device_col = DSUDbContract.TableEntry.DEVICE_COLUMN_NAME;
+            String selection = MessageFormat.format("{0}=? AND {1}=? AND {2}=?",
+                    date_col,
+                    entrynum_col,
+                    device_col);
+            String[] selectionArgs = new String[] {values.getAsString(date_col),
+                    values.getAsString(entrynum_col), values.getAsString(device_col)};
+
+            //Do an update if the constraints match
+            db.update(tableName, values, selection, selectionArgs);
+
+            //This will return the id of the newly inserted row if no conflict
+            //It will also return the offending row without modifying it if in conflict
+            long newRowId = db.insertWithOnConflict(tableName, null, values, SQLiteDatabase.CONFLICT_IGNORE);
 
             // Close the cursor if we opened it
             if (c != null) {
@@ -102,9 +122,7 @@ public class DSUDbHelper extends SQLiteOpenHelper {
 
             return newRowId;
         }
-
     }
-
 
     /**
      * Helper function: create a table with the given name in the given db if it doesn't exist

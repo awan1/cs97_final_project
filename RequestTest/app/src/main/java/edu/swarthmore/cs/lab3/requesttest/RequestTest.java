@@ -17,6 +17,7 @@ import android.widget.TextView;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
+import java.io.File;
 import java.util.Date;
 import java.util.Iterator;
 import java.util.concurrent.ExecutionException;
@@ -102,6 +103,7 @@ public class RequestTest extends Activity {
         String response = "";
         if (deviceType.equals("Test")) {
             response = getTestResponse();
+            deviceType = "Test";
         }
         else {
             try {
@@ -114,7 +116,7 @@ public class RequestTest extends Activity {
 
         }
         Log.i(TAG, "Response: " + response);
-        processRequest(response);
+        processRequest(response, deviceType);
     }
 
     private String getTestResponse() {
@@ -128,8 +130,9 @@ public class RequestTest extends Activity {
      * enter them in a database. Various helper functions are used to this end.
      *
      * @param response the response from a data query. Expect it to be parseable into a JSON Object.
+     * @param deviceType the type of device this response is for
      */
-    private void processRequest(String response){
+    private void processRequest(String response, String deviceType){
         JSONObject temp;
         Date date = new Date();
         String MAIN_KEY = "body";  // The main key in the JSON response
@@ -147,7 +150,7 @@ public class RequestTest extends Activity {
             //once we get array, iterate through list of entries
             for(int i = 0; i< dataArray.length(); i++){
                 temp = dataArray.getJSONObject(i);
-                createTable(date, i, fieldName, fieldName, temp);
+                createTable(date, i, fieldName, fieldName, temp, deviceType);
             }
 
             Log.d(TAG, "processRequest: processed field " + fieldName);
@@ -171,20 +174,25 @@ public class RequestTest extends Activity {
      *   but we want just blood_glucose$value
      *
      * @param date
+     * @param entryNum
+     * @param tableName
      * @param fieldName
      * @param entry
-     * @param entryNum
+     * @param deviceType
      */
-    private void createTable(Date date, int entryNum, String tableName, String fieldName, JSONObject entry){
+    private void createTable(Date date, int entryNum, String tableName, String fieldName,
+                             JSONObject entry, String deviceType){
         Iterator<String> fields = entry.keys();
         String currKey;
         while(fields.hasNext()){
             currKey = fields.next();
             try {
                 if (entry.get(currKey) instanceof JSONObject) {
-                    createTable(date, entryNum, tableName, fieldName + "$" + currKey, entry.getJSONObject(currKey));
+                    createTable(date, entryNum, tableName, fieldName + "$" + currKey,
+                            entry.getJSONObject(currKey), deviceType);
                 } else {
-                    updateTable(date, entryNum, tableName, fieldName + "$" + currKey, entry.getString(currKey));
+                    updateTable(date, entryNum, tableName, fieldName + "$" + currKey,
+                            entry.getString(currKey), deviceType);
                 }
             } catch (Throwable t){
                 Log.e(TAG, "Error in createTable while parsing: \"" + entry + "\": " + t.toString());
@@ -203,10 +211,11 @@ public class RequestTest extends Activity {
      * @param tableName: which table to alter
      * @param fieldName: the SQL database column name
      * @param value: the value of the cell to be altered as a string.
+     * @param deviceType: the value of the cell to be altered as a string.
      * @return the row ID that the value was inserted into
      */
     private long updateTable(Date date, int entryNum, String tableName,
-                             String fieldName, String value) {
+                             String fieldName, String value, String deviceType) {
 
         String message = "field name: " + fieldName +"\nvalue: " + value + "\nentryNum: " + entryNum;
         Log.i(TAG, "updateTable: " + message);
@@ -229,6 +238,7 @@ public class RequestTest extends Activity {
         ContentValues values = new ContentValues();
         values.put(DSUDbContract.TableEntry.DATE_COLUMN_NAME, dateString);
         values.put(DSUDbContract.TableEntry.ENTRYNUM_COLUMN_NAME, entryNum);
+        values.put(DSUDbContract.TableEntry.DEVICE_COLUMN_NAME, deviceType);
         if (valueIsDouble) {
             values.put(fieldName, value_double);
         } else {
@@ -261,15 +271,17 @@ public class RequestTest extends Activity {
     }
 
     @Override
-    protected void onDestroy() {
-        super.onDestroy();
+    protected void onStop() {
         // Wipe the database that was created. In production code we'd probably want to write
         // the database instead, but for testing we want to make it a clean slate.
         try {
-            SQLiteDatabase db = mDbHelper.getWritableDatabase();
-            db.close();
+            String dbName = mDbHelper.getDatabaseName();
+            this.deleteDatabase(dbName);
+            Log.d(TAG, "onStop: db destroyed: " + dbName);
         } catch (SQLiteException e) {
             // Do nothing
+            Log.d(TAG, "onStop: exception caught. " + e);
         }
+        super.onStop();
     }
 }
