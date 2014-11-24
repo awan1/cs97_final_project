@@ -20,12 +20,11 @@ import android.widget.TextView;
 public class RequestView extends Activity {
     private Spinner mTableSpinner;
     private String mTableName;
-    private TextView mRequestResponse;
+    private TextView mTableView;
     private Button mViewTableButton;
     private DSUDbHelper mDbHelper;
 
     private static final String TAG = "RequestView";
-
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -37,13 +36,13 @@ public class RequestView extends Activity {
         mDbHelper = DSUDbHelper.getInstance(myContext);
 
         // Find components
-        mRequestResponse = (TextView) findViewById(R.id.response_text);
+        mTableView = (TextView) findViewById(R.id.table_view);
         mViewTableButton = (Button) findViewById(R.id.view_table_button);
 
         // Make the request response scrollable
-        mRequestResponse.setMovementMethod(new ScrollingMovementMethod());
+        mTableView.setMovementMethod(new ScrollingMovementMethod());
 
-        mTableSpinner = (Spinner) findViewById(R.id.device_type_spinner);
+        mTableSpinner = (Spinner) findViewById(R.id.table_spinner);
         // Create an ArrayAdapter using the string array and a default spinner layout
         ArrayAdapter<CharSequence> adapter = ArrayAdapter.createFromResource(this,
                 R.array.device_array, android.R.layout.simple_spinner_item);

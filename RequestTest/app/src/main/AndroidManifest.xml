@@ -22,6 +22,14 @@
             android:name=".RequestImport"
             android:label="@string/app_name" >
         </activity>
+        <activity
+            android:name=".RequestView"
+            android:label="@string/app_name" >
+        </activity>
+        <activity
+            android:name=".RequestVisualize"
+            android:label="@string/app_name" >
+        </activity>
     </application>
 
 </manifest>

@@ -55,16 +55,16 @@ public class RequestMain extends Activity {
         mViewButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                Intent intent = new Intent(RequestMain.this, RequestView.class);
-                startActivityForResult(intent, viewRequestCode);
+            Intent intent = new Intent(RequestMain.this, RequestView.class);
+            startActivityForResult(intent, viewRequestCode);
             }
         });
 
         mImportButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                Intent intent = new Intent(RequestMain.this, RequestImport.class);
-                startActivityForResult(intent, importRequestCode);
+            Intent intent = new Intent(RequestMain.this, RequestImport.class);
+            startActivityForResult(intent, importRequestCode);
             }
         });
 
@@ -77,7 +77,8 @@ public class RequestMain extends Activity {
         mVisualizeButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                // TODO
+                Intent intent = new Intent(RequestMain.this, RequestVisualize.class);
+                startActivityForResult(intent, visualizeRequestCode);
             }
         });
     }
@@ -103,7 +104,7 @@ public class RequestMain extends Activity {
                 returnedActivityName = "unknown";
         }
         Log.d(TAG, "Returned from " + returnedActivityName + " activity with code " +
-                Integer.toString(requestCode));
+                Integer.toString(resultCode));
         /*
         if (resultCode == Activity.RESULT_OK) {
             if (data != null) {
@@ -140,10 +141,10 @@ public class RequestMain extends Activity {
         try {
             String dbName = mDbHelper.getDatabaseName();
             this.deleteDatabase(dbName);
-            Log.d(TAG, "onStop: db destroyed: " + dbName);
+            Log.d(TAG, "onDestroy: db destroyed: " + dbName);
         } catch (SQLiteException e) {
             // Do nothing
-            Log.d(TAG, "onStop: exception caught. " + e);
+            Log.d(TAG, "onDestroy: exception caught. " + e);
         }
         super.onDestroy();
     }
