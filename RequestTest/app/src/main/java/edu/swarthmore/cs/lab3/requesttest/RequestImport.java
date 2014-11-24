@@ -6,10 +6,6 @@ import android.content.Context;
 import android.content.Intent;
 import android.database.sqlite.SQLiteDatabase;
 
-import android.database.sqlite.SQLiteException;
-
-import android.nfc.Tag;
-import android.os.AsyncTask;
 import android.os.Build;
 
 import android.os.Bundle;
@@ -25,9 +21,6 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 
 
-import java.io.File;
-
-import java.text.MessageFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -45,7 +38,7 @@ import android.widget.Spinner;
 /**
  * Activity to make and process requests.
  */
-public class RequestTest extends Activity {
+public class RequestImport extends Activity {
 
     private Spinner mDeviceTypeSpinner;
     private String mDeviceType;
@@ -54,17 +47,17 @@ public class RequestTest extends Activity {
     private TextView mRequestResponse;
     private DSUDbHelper mDbHelper;
 
-    private static final String TAG = "RequestTest";
+    private static final String TAG = "RequestImport";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        Log.d(TAG, "RequestTest.onCreate called");
+        Log.d(TAG, "RequestImport.onCreate called");
         setContentView(R.layout.activity_request_test);
 
         // Get the SQL database interface
 
-        Context myContext = RequestTest.this;
+        Context myContext = RequestImport.this;
         mDbHelper = new DSUDbHelper(myContext);
 
 
@@ -384,7 +377,7 @@ public class RequestTest extends Activity {
 
     @Override
     protected void onStop() {
-        Intent return_intent = new Intent(RequestTest.this, RequestMain.class);
+        Intent return_intent = new Intent(RequestImport.this, RequestMain.class);
         setResult(Activity.RESULT_OK, return_intent);
         super.onStop();
     }

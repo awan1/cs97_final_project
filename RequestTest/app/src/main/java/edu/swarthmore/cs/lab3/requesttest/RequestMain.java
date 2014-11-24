@@ -1,8 +1,6 @@
 package edu.swarthmore.cs.lab3.requesttest;
 
 import android.app.Activity;
-import android.app.Fragment;
-import android.app.FragmentManager;
 import android.content.Context;
 import android.content.Intent;
 import android.database.sqlite.SQLiteException;
@@ -13,7 +11,6 @@ import android.view.MenuItem;
 import android.view.View;
 import android.widget.Button;
 import android.widget.TextView;
-import android.widget.Toast;
 
 /**
  * Created by awan1 on 11/22/14.
@@ -66,7 +63,7 @@ public class RequestMain extends Activity {
         mImportButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                Intent intent = new Intent(RequestMain.this, RequestTest.class);
+                Intent intent = new Intent(RequestMain.this, RequestImport.class);
                 startActivityForResult(intent, importRequestCode);
             }
         });
