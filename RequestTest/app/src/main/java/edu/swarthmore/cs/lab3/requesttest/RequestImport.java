@@ -97,7 +97,8 @@ public class RequestImport extends Activity {
         mMakeRequestButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                makeRequest(mDeviceType, mUserIDText.getText().toString());
+            makeRequest(mDeviceType, mUserIDText.getText().toString());
+            mRequestResponse.setText("Import Complete!");
             }
         });
     }
@@ -127,7 +128,6 @@ public class RequestImport extends Activity {
                 response = getTestResponse(date);
             } else {
                 RequestClient client = new RequestClient();
-                Log.d(TAG, "before execute");
                 if( Build.VERSION.SDK_INT >= Build.VERSION_CODES.HONEYCOMB ) {
                     try {
                         response = client.executeOnExecutor(client.THREAD_POOL_EXECUTOR, "http://130.58.68.129:8083/data/fitbit/blood_glucose?username=superdock&dateStart=" + date + "&dateEnd=" + date + "&normalize=true").get();
@@ -260,12 +260,6 @@ public class RequestImport extends Activity {
             }
 
             Log.d(TAG, "processRequest: processed field " + fieldName);
-
-            // For now, print out the new table
-            // Get the database
-            SQLiteDatabase db = mDbHelper.getReadableDatabase();
-            //mRequestResponse.setText(mDbHelper.getTableAsString(db, fieldName));
-
         } catch (Throwable t) {
             Log.e(TAG, "Error in processRequest while parsing: \"" + response + "\": " + t.toString());
             t.printStackTrace();
@@ -351,6 +345,7 @@ public class RequestImport extends Activity {
         }
 
         long newRowId = mDbHelper.addItem(db, tableName, fieldName, values, valueIsDouble);
+        db.close();
         return newRowId;
     }
 

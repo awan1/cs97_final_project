@@ -31,7 +31,7 @@ public class DSUDbHelper extends SQLiteOpenHelper {
      */
     public static synchronized DSUDbHelper getInstance(Context context) {
         if (instance == null) {
-            instance = new DSUDbHelper(context);
+            instance = new DSUDbHelper(context.getApplicationContext());
         }
         return instance;
     }
@@ -89,7 +89,9 @@ public class DSUDbHelper extends SQLiteOpenHelper {
         Cursor c = null;
         try {
             // Try to select the given column. This throws an error if the field doesn't exist.
-            c = db.rawQuery("SELECT " + fieldName + " FROM " + tableName, null);
+            String command = MessageFormat.format("SELECT {0} FROM {1}",
+                    fieldName, tableName);
+            c = db.rawQuery(command, null);
         } catch (SQLiteException e) {
             // Add the column to the table
             String value_type;
@@ -98,7 +100,8 @@ public class DSUDbHelper extends SQLiteOpenHelper {
             } else {
                 value_type = DSUDbContract.TableEntry.DEFAULT_ENTRY_TYPE;
             }
-            String command = "ALTER TABLE " + tableName + " ADD COLUMN " + fieldName + " " + value_type;
+            String command = MessageFormat.format("ALTER TABLE {0} ADD COLUMN {1} {2}",
+                    tableName, fieldName, value_type);
             Log.d(TAG, "addItem: command "+command);
             db.execSQL(command);
         } finally {
@@ -171,7 +174,7 @@ public class DSUDbHelper extends SQLiteOpenHelper {
             String[] columnNames = allRows.getColumnNames();
             do {
                 for (String name: columnNames) {
-                    tableString += String.format("%s: %s\n", name,
+                    tableString += MessageFormat.format("{0}: {1}\n", name,
                             allRows.getString(allRows.getColumnIndex(name)));
                 }
                 tableString += "\n";
