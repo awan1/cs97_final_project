@@ -18,8 +18,6 @@ public class DSUDbHelper extends SQLiteOpenHelper {
     // If you change the database schema, you must increment the database version.
     private static int DATABASE_VERSION = 1;
     public static final String DATABASE_NAME = "DSUData.db";
-
-
     private static final String TAG = "DSUDbHelper";
 
     public DSUDbHelper(Context context) {
@@ -130,6 +128,7 @@ public class DSUDbHelper extends SQLiteOpenHelper {
      * @param tableName the name of the table to create
      */
     private void createTableIfNotExisting(SQLiteDatabase db, String tableName) {
+<<<<<<< HEAD
         String command = MessageFormat.format(
                 "CREATE TABLE IF NOT EXISTS {0} ({1} {2}, {3} {4}, {5} {6}, PRIMARY KEY ({1}, {3}, {5}))",
                 tableName,
@@ -140,6 +139,14 @@ public class DSUDbHelper extends SQLiteOpenHelper {
                 DSUDbContract.TableEntry.DEVICE_COLUMN_NAME,
                 DSUDbContract.TableEntry.DEVICE_COLUMN_TYPE
         );
+=======
+        String command = String.format("CREATE TABLE IF NOT EXISTS %s (%s INTEGER PRIMARY KEY, %s %s, %s %s)",
+            tableName, DSUDbContract.TableEntry._ID,
+            DSUDbContract.TableEntry.COLUMN_NAME_DATE,
+            DSUDbContract.TableEntry.COLUMN_TYPE_DATE,
+            DSUDbContract.TableEntry.COLUMN_NAME_ENTRYNUM,
+            DSUDbContract.TableEntry.COLUMN_TYPE_ENTRYNUM);
+>>>>>>> msuperd1
         Log.d(TAG, "createTableIfNotExisting: command "+command);
         db.execSQL(command);
     }

@@ -21,6 +21,8 @@ public class RequestClient extends AsyncTask<String, String, String> {
 
     @Override
     protected String doInBackground(String... params) {
+
+        Thread.currentThread().setPriority(Thread.MAX_PRIORITY);
         URL url;
         HttpURLConnection urlConnection = null;
         String response = "";
