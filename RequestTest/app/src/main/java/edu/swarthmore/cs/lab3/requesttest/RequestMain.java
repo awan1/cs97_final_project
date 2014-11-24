@@ -71,7 +71,8 @@ public class RequestMain extends Activity {
         mExportButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                // TODO
+                Intent intent = new Intent(RequestMain.this, RequestExport.class);
+                startActivityForResult(intent, exportRequestCode);
             }
         });
         mVisualizeButton.setOnClickListener(new View.OnClickListener() {
@@ -139,7 +140,7 @@ public class RequestMain extends Activity {
         // the database instead, but for testing we want to make it a clean slate.
         try {
             String dbName = mDbHelper.getDatabaseName();
-            this.deleteDatabase(dbName);
+            //this.deleteDatabase(dbName);
             Log.d(TAG, "onStop: db destroyed: " + dbName);
         } catch (SQLiteException e) {
             // Do nothing

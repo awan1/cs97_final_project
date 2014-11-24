@@ -134,6 +134,45 @@ public class DSUDbHelper extends SQLiteOpenHelper {
         }
     }
 
+
+    public void selectItems(SQLiteDatabase db, String tableName, String deviceType, String dateStart, String dateEnd) {
+        Cursor c = null;
+        dateStart = dateStart.replace("-","");
+        dateEnd = dateEnd.replace("-","");
+        String command = MessageFormat.format(
+                "SELECT * FROM {0} t WHERE SUBSTR(t.{1},1,4)||SUBSTR(t.{1},6,2)||SUBSTR(t.{1},9,2) BETWEEN {2} AND {3}", // AND t.{4} = {5}",
+                tableName,
+                DSUDbContract.TableEntry.DATE_COLUMN_NAME,
+                dateStart,
+                dateEnd//,
+                //DSUDbContract.TableEntry.DEVICE_COLUMN_NAME,
+                //deviceType
+        );
+        try {
+            // Try to select the given column. This throws an error if the field doesn't exist.
+            c = db.rawQuery(command, null);
+        } catch (SQLiteException e) {
+            Log.e(TAG, "Error. Invalid Select Command:" + command);
+        }
+
+        String tableString = String.format("Table %s:\n", tableName);
+        Cursor allRows  = c;
+        if (allRows.moveToFirst() ){
+            String[] columnNames = allRows.getColumnNames();
+            do {
+                for (String name: columnNames) {
+                    tableString += String.format("%s: %s\n", name,
+                            allRows.getString(allRows.getColumnIndex(name)));
+                }
+                tableString += "\n";
+
+            } while (allRows.moveToNext());
+        }
+
+        Log.i(TAG,"DSU String: " + tableString);
+
+    }
+
     /**
      * Helper function: create a table with the given name in the given db if it doesn't exist
      * @param db the database to create the table in
