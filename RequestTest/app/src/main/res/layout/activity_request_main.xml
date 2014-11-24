@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+              android:orientation="vertical"
+              android:gravity="center_horizontal"
+              android:layout_width="match_parent"
+              android:layout_height="match_parent"
+    >
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:padding="48dp"
+        android:textSize="28sp"
+        android:id="@+id/greeting_view" />
+
+    <Button
+        android:id="@+id/import_button"
+        android:layout_margin="@dimen/main_button_padding"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/import_button" />
+    <Button
+        android:id="@+id/view_button"
+        android:layout_margin="@dimen/main_button_padding"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/view_button" />
+
+    <Button
+        android:id="@+id/export_button"
+        android:layout_margin="@dimen/main_button_padding"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/export_button" />
+    <Button
+        android:id="@+id/visualize_button"
+        android:layout_margin="@dimen/main_button_padding"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/visualize_button" />
+
+</LinearLayout>

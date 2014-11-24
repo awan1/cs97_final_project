@@ -1,8 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
 
-    <string name="app_name">RequestTest</string>
+    <string name="app_name">DSU to SQL Parser</string>
     <string name="action_settings">Settings</string>
+    <!--For request screen-->
     <string name="user_id">Enter User ID</string>
     <string name="make_request_button">Make Request!</string>
     <string name="device_type_header">Device Type</string>
@@ -16,5 +17,13 @@
         <item>RunKeeper</item>
         <item>Withings</item>
     </string-array>
+    <!--For main screen-->
+    <string name="view_button">View Database</string>
+    <string name="import_button">Import DSUs</string>
+    <string name="export_button">Export Database</string>
+    <string name="visualize_button">Create Visualizations</string>
+    <!--For view screen-->
+    <string name="table_name_header">Database Tables</string>
+    <string name="view_table_button">View Table!</string>
 
 </resources>
