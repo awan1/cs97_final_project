@@ -3,6 +3,9 @@ package edu.swarthmore.cs.lab3.requesttest;
 import android.app.Activity;
 import android.content.ContentValues;
 import android.database.sqlite.SQLiteDatabase;
+import android.nfc.Tag;
+import android.os.AsyncTask;
+import android.os.Build;
 import android.os.Bundle;
 import android.text.method.ScrollingMovementMethod;
 import android.util.Log;
@@ -15,6 +18,7 @@ import android.widget.TextView;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
+import java.text.MessageFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -39,6 +43,7 @@ public class RequestTest extends Activity {
     private Button mMakeRequestButton;
     private TextView mRequestResponse;
     private DSUDbHelper mDbHelper;
+    private RequestClient mRequestClient;
 
     private static final String TAG = "RequestTest";
 
@@ -49,7 +54,7 @@ public class RequestTest extends Activity {
         setContentView(R.layout.activity_request_test);
 
         // Get the SQL database interface
-
+        mRequestClient = new RequestClient();
         mDbHelper = new DSUDbHelper(RequestTest.this);
 
         // Find components
@@ -105,50 +110,46 @@ public class RequestTest extends Activity {
         String dateStart = "2014-01-01";
         String dateEnd = "2014-01-07";
 
-        // TODO: build url with the info
-        //RequestClient client = new RequestClient();
-        //String response = "";
-        //if (deviceType.equals("Test")) {
-        //    response = getTestResponse();
-        //}
-
-        //else {
-        //    try {
-        //        //String dateStart = "2014-01-01";
-        //        //String dateEnd = "2014-01-01";
-        //        //response = client.execute("http://130.58.68.129:8083/data/fitbit/blood_glucose?username=superdock&dateStart=" + dateStart + "&dateEnd=" + dateEnd + "&normalize=true").get();
-        //    } catch (InterruptedException e) {
-        //        response = "Interrupted Exception caught.";
-        //    } catch (ExecutionException e) {
-        //        response = "Execution Exception caught.";
-        //    }
-
-        //}
-        //Log.i(TAG, "Response: " + response);
         makeRequestByDate(deviceType, userId, dateStart, dateEnd);
     }
 
     private void makeRequestByDate(String deviceType, String userId, String dateStart, String dateEnd) {
-        RequestClient client = new RequestClient();
-        //RequestClient client = new RequestClient();
         String response = "";
         ArrayList<String> dates = getDates(dateStart, dateEnd);
+        ArrayList<String> responses = new ArrayList<String>();
         for (int i = 0; i < dates.size(); i++) {
             String date = dates.get(i);
-            try {
-                new Thread(new Runnable() {
-                    public void run() {
-                        RequestClient client = new RequestClient();
-                        String response = client.execute("http://130.58.68.129:8083/data/fitbit/blood_glucose?username=superdock&dateStart=" + date + "&dateEnd=" + date + "&normalize=true").get();
-                        processRequest(response, date);
+            if (deviceType.equals("Test")) {
+                response = getTestResponse(date);
+            } else {
+                RequestClient client = new RequestClient();
+                Log.d(TAG, "before execute");
+                if( Build.VERSION.SDK_INT >= Build.VERSION_CODES.HONEYCOMB ) {
+                    try {
+                        response = client.executeOnExecutor(client.THREAD_POOL_EXECUTOR, "http://130.58.68.129:8083/data/fitbit/blood_glucose?username=superdock&dateStart=" + date + "&dateEnd=" + date + "&normalize=true").get();
+                        //response = mRequestClient.executeOnExecutor(mRequestClient.THREAD_POOL_EXECUTOR, "http://130.58.68.129:8083/data/fitbit/blood_glucose?username=superdock&dateStart=" + date + "&dateEnd=" + date + "&normalize=true").get();
+                    } catch (InterruptedException e) {
+                        response = "Interrupted Exception caught.";
+                    } catch (ExecutionException e) {
+                        response = "Execution Exception caught.";
                     }
-                });
-            } catch (InterruptedException e) {
-                //TODO: handle exception
-                response = "Interrupted Exception caught.";
-            } catch (ExecutionException e) {
-                response = "Execution Exception caught.";
+                } else {
+                    try {
+                        response = client.execute("http://130.58.68.129:8083/data/fitbit/blood_glucose?username=superdock&dateStart=" + date + "&dateEnd=" + date + "&normalize=true").get();
+                        //response = mRequestClient.execute("http://130.58.68.129:8083/data/fitbit/blood_glucose?username=superdock&dateStart=" + date + "&dateEnd=" + date + "&normalize=true").get();
+                    } catch (InterruptedException e) {
+                        response = "Interrupted Exception caught.";
+                    } catch (ExecutionException e) {
+                        response = "Execution Exception caught.";
+                    }
+                }
             }
+            responses.add(response);
+        }
+        for (int i = 0; i < responses.size(); i++) {
+            String r = responses.get(i);
+            String d = dates.get(i);
+            processRequest(r, d);
         }
     }
 
@@ -165,7 +166,6 @@ public class RequestTest extends Activity {
             try {
                 c.setTime(sdf.parse(date));
             } catch (ParseException e) {
-                //TODO: handle exception
                 break;
             }
             c.add(Calendar.DATE, 1);  // number of days to add
@@ -178,39 +178,41 @@ public class RequestTest extends Activity {
         return dates;
     }
 
-    private String getTestResponse() {
-        String response = " {'shim': null," +
-        " 'timeStamp': 1416423277," +
-        " 'body': {" +
-            " 'blood_glucose': [" +
-            " { " +
+    private String getTestResponse(String date) {
+        String response = "";
+        response = " {'shim': null," +
+                " 'timeStamp': 1416423277," +
+                " 'body': {" +
+                " 'blood_glucose': [" +
+                " { " +
                 " 'blood_glucose': {" +
-                " 'value': 0, " +
-                        " 'unit': 'mg/dL'" +
-            " }," +
+                " 'value': 1.1, " +
+                " 'unit': 'mg/dL'" +
+                " }," +
                 " 'effective_time_frame': {" +
-                " 'date_time': '2014-11-20T00:00:00.000Z'" +
-            " }" +
-            " }," +
-            " { " +
+                " 'date_time': '"+date+"T00:00:00.000Z'" +
+                " }" +
+                " }," +
+                " { " +
                 " 'blood_glucose': { " +
-                " 'value': 0," +
-                        " 'unit': 'mg/dL' " +
-            " }," +
+                " 'value': 1.2," +
+                " 'unit': 'mg/dL' " +
+                " }," +
                 " 'effective_time_frame': {" +
-                " 'date_time': '2014-11-20T00:00:00.000Z'" +
-            " }" +
-            " }," +
-            " {" +
+                " 'date_time': '"+date+"T00:00:00.000Z'" +
+                " }" +
+                " }," +
+                " {" +
                 " 'blood_glucose': {" +
-                " 'value': 0," +
-                        "'unit': 'mg/dL'" +
-            "}, " +
+                " 'value': 1.3," +
+                "'unit': 'mg/dL'" +
+                "}, " +
                 " 'effective_time_frame': {" +
-                " 'date_time': '2014-11-20T00:00:00.000Z'}" +
-            "}" +
-            "]" +
-        "}}";
+                " 'date_time': '"+date+"T00:00:00.000Z'}" +
+                "}" +
+                "]" +
+                "}}";
+        Log.d(TAG, "getTestResponse: " + response);
         return response;
     }
 
@@ -222,6 +224,7 @@ public class RequestTest extends Activity {
      * @param response the response from a data query. Expect it to be parseable into a JSON Object.
      */
     private void processRequest(String response, String dateString){
+        Log.d(TAG, "in processRequest");
         JSONObject temp;
         SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
         sdf.setLenient(false);
@@ -229,11 +232,12 @@ public class RequestTest extends Activity {
         try {
             date = sdf.parse(dateString);
         } catch (ParseException e) {
+            Log.i(TAG, "processRequest parsing error");
             date = new Date();
         }
         String MAIN_KEY = "body";  // The main key in the JSON response
         try {
-
+            Log.i(TAG, response);
             JSONObject obj = new JSONObject(response);
 
             JSONObject body = obj.getJSONObject(MAIN_KEY);
@@ -254,7 +258,7 @@ public class RequestTest extends Activity {
             // For now, print out the new table
             // Get the database
             SQLiteDatabase db = mDbHelper.getReadableDatabase();
-            mRequestResponse.setText(mDbHelper.getTableAsString(db, fieldName));
+            //mRequestResponse.setText(mDbHelper.getTableAsString(db, fieldName));
 
         } catch (Throwable t) {
             Log.e(TAG, "Error in processRequest while parsing: \"" + response + "\": " + t.toString());
@@ -275,6 +279,7 @@ public class RequestTest extends Activity {
      * @param entryNum
      */
     private void createTableEntry(Date date, int entryNum, String tableName, String fieldName, JSONObject entry){
+        Log.d(TAG, "in createTableEntry");
         Iterator<String> fields = entry.keys();
         String currKey;
         while(fields.hasNext()){
@@ -326,6 +331,7 @@ public class RequestTest extends Activity {
         String dateString = date.toString();
 
         ContentValues values = new ContentValues();
+        Log.i(TAG, dateString);
         values.put(DSUDbContract.TableEntry.COLUMN_NAME_DATE, dateString);
         values.put(DSUDbContract.TableEntry.COLUMN_NAME_ENTRYNUM, entryNum);
         if (valueIsDouble) {
