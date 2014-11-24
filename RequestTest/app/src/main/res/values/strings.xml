@@ -25,5 +25,13 @@
     <!--For view screen-->
     <string name="table_name_header">Database Tables</string>
     <string name="view_table_button">View Table!</string>
+    <!--For visualize screen-->
+    <string name="visualization_header">Visualizations</string>
+    <string name="make_visualization_button">Generate!</string>
+    <string-array name="visualizations_array">
+        <item>Line</item>
+        <item>Bar</item>
+    </string-array>
+
 
 </resources>

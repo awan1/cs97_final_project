@@ -46,7 +46,7 @@ public class RequestView extends Activity {
         // Make the request response scrollable
         mTableView.setMovementMethod(new ScrollingMovementMethod());
 
-        buildSpinner();
+        buildTableSpinner();
         mViewTableButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -56,10 +56,10 @@ public class RequestView extends Activity {
     }
 
     /**
-     * Helper function to build the spinner. It has to figure out what tables are in the
+     * Helper function to build the table spinner. It has to figure out what tables are in the
      * database and allow users to select them.
      */
-    private void buildSpinner() {
+    private void buildTableSpinner() {
         mTableSpinner = (Spinner) findViewById(R.id.table_spinner);
         // Figure out the names of tables in the database
         final ArrayList<String> tableArray = new ArrayList<String>();
