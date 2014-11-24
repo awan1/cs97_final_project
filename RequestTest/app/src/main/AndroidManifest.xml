@@ -10,7 +10,7 @@
         android:theme="@style/AppTheme" >
         <activity
             android:name=".RequestMain"
-            android:label="RequestMain" >
+            android:label="DSU-SQL" >
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 

@@ -3,6 +3,7 @@ package edu.swarthmore.cs.lab3.requesttest;
 import android.app.Activity;
 import android.content.ContentValues;
 import android.content.Context;
+import android.content.Intent;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteException;
 import android.os.Bundle;
@@ -27,7 +28,9 @@ import android.widget.ArrayAdapter;
 import android.widget.EditText;
 import android.widget.Spinner;
 
-
+/**
+ * Activity to make and process requests.
+ */
 public class RequestTest extends Activity {
 
     private Spinner mDeviceTypeSpinner;
@@ -42,7 +45,7 @@ public class RequestTest extends Activity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        Log.d(TAG, "onCreate(savedInstanceState) called");
+        Log.d(TAG, "RequestTest.onCreate called");
         setContentView(R.layout.activity_request_test);
 
         // Get the SQL database interface
@@ -272,16 +275,8 @@ public class RequestTest extends Activity {
 
     @Override
     protected void onStop() {
-        // Wipe the database that was created. In production code we'd probably want to write
-        // the database instead, but for testing we want to make it a clean slate.
-        try {
-            String dbName = mDbHelper.getDatabaseName();
-            this.deleteDatabase(dbName);
-            Log.d(TAG, "onStop: db destroyed: " + dbName);
-        } catch (SQLiteException e) {
-            // Do nothing
-            Log.d(TAG, "onStop: exception caught. " + e);
-        }
+        Intent return_intent = new Intent(RequestTest.this, RequestMain.class);
+        setResult(Activity.RESULT_OK, return_intent);
         super.onStop();
     }
 }

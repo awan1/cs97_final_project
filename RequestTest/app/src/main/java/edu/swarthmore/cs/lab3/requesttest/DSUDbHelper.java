@@ -25,6 +25,18 @@ public class DSUDbHelper extends SQLiteOpenHelper {
         super(context, DATABASE_NAME, null, DATABASE_VERSION);
     }
 
+    private static DSUDbHelper instance;
+    /**
+     * Create singleton behavior.
+     * @return the singleton DSUDbHelper instance
+     */
+    public static synchronized DSUDbHelper getInstance(Context context) {
+        if (instance == null) {
+            instance = new DSUDbHelper(context);
+        }
+        return instance;
+    }
+
     @Override
     public void onCreate(SQLiteDatabase db) {
         // Don't do anything for create. Will populate database later.
