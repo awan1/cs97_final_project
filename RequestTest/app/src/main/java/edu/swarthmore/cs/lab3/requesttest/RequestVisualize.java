@@ -14,8 +14,16 @@ import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.Spinner;
+import android.widget.Toast;
+
+import com.androidplot.xy.LineAndPointFormatter;
+import com.androidplot.xy.PointLabelFormatter;
+import com.androidplot.xy.SimpleXYSeries;
+import com.androidplot.xy.XYPlot;
+import com.androidplot.xy.XYSeries;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 
 /**
  * Created by awan1 on 11/23/14.
@@ -28,6 +36,7 @@ public class RequestVisualize extends Activity  {
     private String mVisualizationName;
     private Button mVisualizeButton;
     private DSUDbHelper mDbHelper;
+    private XYPlot mPlot;
     private static final String TAG = "RequestVisualize";
 
     @Override
@@ -42,9 +51,24 @@ public class RequestVisualize extends Activity  {
 
         // Find components
         mVisualizeButton = (Button) findViewById(R.id.make_visualization_button);
+        mPlot = (XYPlot) findViewById(R.id.visualization_plot);
 
         buildTableSpinner();
         buildVisualizationSpinner();
+        mVisualizeButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if (mTableName == null) {
+                    String text = "Please select a table to visualize.";
+                    Toast.makeText(getApplicationContext(), text, Toast.LENGTH_SHORT).show();
+                } else if (mVisualizationName == null) {
+                    String text = "Please select a visualization type.";
+                    Toast.makeText(getApplicationContext(), text, Toast.LENGTH_SHORT).show();
+                } else {
+                    doPlot();
+                }
+            }
+        });
     }
     /**
      * Helper function to build the table spinner. It has to figure out what tables are in the
@@ -124,6 +148,53 @@ public class RequestVisualize extends Activity  {
                 Log.d(TAG, msg);
             }
         });
+    }
+
+    /**
+     * Helper function that generates the visualizations.
+     */
+    private void doPlot() {
+        // Set labels
+        mPlot.setTitle(mVisualizationName + " plot for " + mTableName);
+        mPlot.setDomainLabel("Domain");
+        mPlot.setRangeLabel("Range");
+
+        // Create a couple arrays of y-values to mPlot:
+        Number[] series1Numbers = {1, 8, 5, 2, 7, 4};
+        Number[] series2Numbers = {4, 6, 3, 8, 2, 10};
+
+        // Turn the above arrays into XYSeries':
+        XYSeries series1 = new SimpleXYSeries(
+                Arrays.asList(series1Numbers),          // SimpleXYSeries takes a List so turn our array into a List
+                SimpleXYSeries.ArrayFormat.Y_VALS_ONLY, // Y_VALS_ONLY means use the element index as the x value
+                "Series1");                             // Set the display title of the series
+
+        // same as above
+        XYSeries series2 = new SimpleXYSeries(Arrays.asList(series2Numbers), SimpleXYSeries.ArrayFormat.Y_VALS_ONLY, "Series2");
+
+        // Create a formatter to use for drawing a series using LineAndPointRenderer
+        // and configure it from xml:
+        LineAndPointFormatter series1Format = new LineAndPointFormatter();
+        series1Format.setPointLabelFormatter(new PointLabelFormatter());
+        series1Format.configure(getApplicationContext(),
+                R.xml.line_point_formatter_with_plf1);
+
+        // add a new series' to the xyplot:
+        mPlot.addSeries(series1, series1Format);
+
+        // same as above:
+        LineAndPointFormatter series2Format = new LineAndPointFormatter();
+        series2Format.setPointLabelFormatter(new PointLabelFormatter());
+        series2Format.configure(getApplicationContext(),
+                R.xml.line_point_formatter_with_plf2);
+        mPlot.addSeries(series2, series2Format);
+
+        // reduce the number of range labels
+        mPlot.setTicksPerRangeLabel(3);
+        mPlot.getGraphWidget().setDomainLabelOrientation(-45);
+
+        // redraw the plot
+        mPlot.redraw();
     }
 
     @Override
