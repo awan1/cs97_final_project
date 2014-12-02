@@ -71,7 +71,8 @@ public class RequestMain extends Activity {
         mExportButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                // TODO
+                Intent intent = new Intent(RequestMain.this, RequestExport.class);
+                startActivityForResult(intent, exportRequestCode);
             }
         });
         mVisualizeButton.setOnClickListener(new View.OnClickListener() {
