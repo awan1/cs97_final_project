@@ -56,7 +56,7 @@ public class RequestExport extends Activity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         Log.d(TAG, "RequestExport.onCreate called");
-        setContentView(R.layout.activity_request_test);
+        setContentView(R.layout.activity_request_import);
 
         // Get the SQL database interface
 
