@@ -8,6 +8,8 @@ import android.database.sqlite.SQLiteException;
 import android.database.sqlite.SQLiteOpenHelper;
 import android.util.Log;
 
+import junit.framework.Test;
+
 import java.text.MessageFormat;
 
 /**
@@ -134,27 +136,59 @@ public class DSUDbHelper extends SQLiteOpenHelper {
         }
     }
 
-
-    public void selectItems(SQLiteDatabase db, String tableName, String deviceType, String dateStart, String dateEnd) {
+    /**
+     *
+     * @param db the database to get the table from
+     * @param tableName the the name of the table that we are making a request from
+     * @param deviceType the type of the device from which the data came (i.e. fitbit)
+     * @param dateStart the first date in the date range from which we want data
+     * @param dateEnd the last date in the date range from which we want data (inclusive)
+     * @return a response cursor to be converted to DSU format
+     */
+    public Cursor selectItems(SQLiteDatabase db, String tableName, String deviceType, String dateStart, String dateEnd) {
         Cursor c = null;
+        String ALL_DEVICES = "All Devices";
+
+        //convert dates into integers of the format YYYYMMDD
         dateStart = dateStart.replace("-","");
         dateEnd = dateEnd.replace("-","");
-        String command = MessageFormat.format(
-                "SELECT * FROM {0} t WHERE SUBSTR(t.{1},1,4)||SUBSTR(t.{1},6,2)||SUBSTR(t.{1},9,2) BETWEEN {2} AND {3}", // AND t.{4} = {5}",
-                tableName,
-                DSUDbContract.TableEntry.DATE_COLUMN_NAME,
-                dateStart,
-                dateEnd//,
-                //DSUDbContract.TableEntry.DEVICE_COLUMN_NAME,
-                //deviceType
-        );
+        String command;
+
+        //select all info for the range of dates provided, based on parsing strategy shown directly above. Response is ordered by date and entry number (soon to be entry ID)
+
+        if (deviceType.equals(ALL_DEVICES)) { //if the user wants the specific data for all devices, use this query
+            command = MessageFormat.format(
+                    "SELECT * FROM {0} WHERE CAST(substr({1},1,4)||substr({1},6,2)||substr({1},9,2) as INTEGER) BETWEEN {2} AND {3} ORDER BY {4} ASC, {5} ASC",
+                    tableName, //0
+                    DSUDbContract.TableEntry.DATE_COLUMN_NAME, //1
+                    dateStart, //2
+                    dateEnd, //3
+                    DSUDbContract.TableEntry.DATE_COLUMN_NAME, //4
+                    DSUDbContract.TableEntry.ENTRYNUM_COLUMN_NAME //5
+            );
+        } else { //if the user wants the specific data for a specific device, use this query
+            command = MessageFormat.format(
+                    "SELECT * FROM {0} WHERE {1}=\"{2}\" AND CAST(substr({3},1,4)||substr({3},6,2)||substr({3},9,2) as INTEGER) BETWEEN {4} AND {5} ORDER BY {6} ASC, {7} ASC",
+                    tableName, //0
+                    DSUDbContract.TableEntry.DEVICE_COLUMN_NAME, //1
+                    deviceType, //2
+                    DSUDbContract.TableEntry.DATE_COLUMN_NAME, //3
+                    dateStart, //4
+                    dateEnd, //5
+                    DSUDbContract.TableEntry.DATE_COLUMN_NAME, //6
+                    DSUDbContract.TableEntry.ENTRYNUM_COLUMN_NAME //7
+            );
+        }
+
+        Log.i(TAG, command);
         try {
             // Try to select the given column. This throws an error if the field doesn't exist.
             c = db.rawQuery(command, null);
         } catch (SQLiteException e) {
             Log.e(TAG, "Error. Invalid Select Command:" + command);
         }
-
+        /*
+        //this is used only for error checking purposes, up until ****
         String tableString = String.format("Table %s:\n", tableName);
         Cursor allRows  = c;
         if (allRows.moveToFirst() ){
@@ -170,7 +204,9 @@ public class DSUDbHelper extends SQLiteOpenHelper {
         }
 
         Log.i(TAG,"DSU String: " + tableString);
-
+        //error checking print statement complete
+        */
+        return c; //return cursor to be used in RequestExport
     }
 
     /**

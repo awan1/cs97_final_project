@@ -1,6 +1,9 @@
 package edu.swarthmore.cs.lab3.requesttest;
 
 import android.app.Activity;
+import android.app.DialogFragment;
+import android.app.Fragment;
+import android.app.FragmentManager;
 import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
@@ -15,6 +18,7 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.Button;
+import android.widget.DatePicker;
 import android.widget.TextView;
 
 import org.json.JSONArray;
@@ -28,6 +32,7 @@ import java.util.Calendar;
 
 import java.util.Date;
 import java.util.Iterator;
+import java.util.Random;
 import java.util.concurrent.ExecutionException;
 
 import android.widget.AdapterView;
@@ -56,10 +61,8 @@ public class RequestImport extends Activity {
         setContentView(R.layout.activity_request_test);
 
         // Get the SQL database interface
-
         Context myContext = RequestImport.this;
         mDbHelper = new DSUDbHelper(myContext);
-
 
         // Find components
         mRequestResponse = (TextView) findViewById(R.id.response_text);
@@ -104,33 +107,43 @@ public class RequestImport extends Activity {
 
     /**
      * Helper function to make the request to the server.
-     * @param deviceType The wearable to query data for
+     * @param deviceType The wearable to query data for (or 'Test')
      * @param userId The user ID
      */
     private void makeRequest(String deviceType, String userId) {
         String msg = "device type: " + deviceType + " | userId: " + userId;
         Log.d(TAG, msg);
 
-        String dateStart = "2014-01-01";
-        String dateEnd = "2014-01-07";
+        String dateStart = "2014-01-01"; //TODO: select using date picker
+        String dateEnd = "2014-01-07"; //TODO: select using date picker
+        String measure = "physical_activity"; //TODO: select using spinner
 
-        makeRequestByDate(deviceType, userId, dateStart, dateEnd);
+        makeRequestByDate(deviceType, userId, dateStart, dateEnd, measure);
     }
 
-    private void makeRequestByDate(String deviceType, String userId, String dateStart, String dateEnd) {
+    /**
+     *
+     * @param deviceType: The wearable to query data for (or 'Test')
+     * @param userId: The user ID
+     * @param dateStart: The first date in our range of dates to import
+     * @param dateEnd: The last date in our range of dates to import (included)
+     * @param measure: The measure that we are trying to access (i.e. blood_glucose)
+     */
+    private void makeRequestByDate(String deviceType, String userId, String dateStart, String dateEnd, String measure) {
         String response = "";
-        ArrayList<String> dates = getDates(dateStart, dateEnd);
-        ArrayList<String> responses = new ArrayList<String>();
-        for (int i = 0; i < dates.size(); i++) {
+        ArrayList<String> dates = getDates(dateStart, dateEnd); //array consisting of dates starting with dateStart and ending in dateEnd (inclusive)
+        ArrayList<String> responses = new ArrayList<String>(); //responses corresponding to the dates in the dates array
+        for (int i = 0; i < dates.size(); i++) { //make a separate request for each date
             String date = dates.get(i);
-            if (deviceType.equals("Test")) {
-                response = getTestResponse(date);
-            } else {
+            if (deviceType.equals("Test")) { //use a test response
+                response = getTestResponse(date, measure);
+            } else { //otherwise access our response from the username above
                 RequestClient client = new RequestClient();
-                Log.d(TAG, "before execute");
+
+                //use the method below to handle threading issues
                 if( Build.VERSION.SDK_INT >= Build.VERSION_CODES.HONEYCOMB ) {
                     try {
-                        response = client.executeOnExecutor(client.THREAD_POOL_EXECUTOR, "http://130.58.68.129:8083/data/fitbit/blood_glucose?username=superdock&dateStart=" + date + "&dateEnd=" + date + "&normalize=true").get();
+                        response = client.executeOnExecutor(client.THREAD_POOL_EXECUTOR, "http://130.58.68.129:8083/data/"+deviceType.toLowerCase()+"/blood_glucose?username="+userId+"&dateStart=" + date + "&dateEnd=" + date + "&normalize=true").get();
                         //response = mRequestClient.executeOnExecutor(mRequestClient.THREAD_POOL_EXECUTOR, "http://130.58.68.129:8083/data/fitbit/blood_glucose?username=superdock&dateStart=" + date + "&dateEnd=" + date + "&normalize=true").get();
                     } catch (InterruptedException e) {
                         response = "Interrupted Exception caught.";
@@ -139,7 +152,7 @@ public class RequestImport extends Activity {
                     }
                 } else {
                     try {
-                        response = client.execute("http://130.58.68.129:8083/data/fitbit/blood_glucose?username=superdock&dateStart=" + date + "&dateEnd=" + date + "&normalize=true").get();
+                        response = client.execute("http://130.58.68.129:8083/data/"+deviceType.toLowerCase()+"/blood_glucose?username="+userId+"&dateStart=" + date + "&dateEnd=" + date + "&normalize=true").get();
                         //response = mRequestClient.execute("http://130.58.68.129:8083/data/fitbit/blood_glucose?username=superdock&dateStart=" + date + "&dateEnd=" + date + "&normalize=true").get();
                     } catch (InterruptedException e) {
                         response = "Interrupted Exception caught.";
@@ -148,8 +161,10 @@ public class RequestImport extends Activity {
                     }
                 }
             }
-            responses.add(response);
+            responses.add(response); //add response for a single day to our response array
         }
+
+        //process request for each date in our date range
         for (int i = 0; i < responses.size(); i++) {
             String r = responses.get(i);
             String d = dates.get(i);
@@ -157,15 +172,22 @@ public class RequestImport extends Activity {
         }
     }
 
+    /**
+     *
+     * @param dateStart: The first date in our range of dates to import
+     * @param dateEnd: The last date in our range of dates to import (included)
+     * @return The array of dates in string format
+     */
     private ArrayList<String> getDates(String dateStart, String dateEnd){
 
         String date = dateStart;
-        ArrayList<String> dates = new ArrayList<String>();
+        ArrayList<String> dates = new ArrayList<String>(); //list of dates as strings
         dates.add(dateStart);
         while (true) {
-            String msg = "date: " + date;
-            Log.i(TAG, msg);
-            SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
+            if (date.equals(dateEnd)){ //break at last date
+                break;
+            }
+            SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd"); //date format
             Calendar c = Calendar.getInstance();
             try {
                 c.setTime(sdf.parse(date));
@@ -173,51 +195,148 @@ public class RequestImport extends Activity {
                 break;
             }
             c.add(Calendar.DATE, 1);  // number of days to add
-            date = sdf.format(c.getTime());  // dt is now the new date
-            dates.add(date);
-            if (date.equals(dateEnd)){
-                break;
-            }
+            date = sdf.format(c.getTime());  // date is now the new date in our specified date format
+            dates.add(date); //add date string to our list of dates
         }
         return dates;
     }
 
-    private String getTestResponse(String date) {
+    /**
+     *
+     * @param date: The date corresponding to data found in the response
+     * @param measure: The measure that we are trying to access (i.e. blood_glucose)
+     * @return a test DSU response for that dat
+     */
+    private String getTestResponse(String date, String measure) {
         String response = "";
-        response = " {'shim': null," +
-                " 'timeStamp': 1416423277," +
-                " 'body': {" +
-                " 'blood_glucose': [" +
-                " { " +
-                " 'blood_glucose': {" +
-                " 'value': 1.1, " +
-                " 'unit': 'mg/dL'" +
-                " }," +
-                " 'effective_time_frame': {" +
-                " 'date_time': '"+date+"T00:00:00.000Z'" +
-                " }" +
-                " }," +
-                " { " +
-                " 'blood_glucose': { " +
-                " 'value': 1.2," +
-                " 'unit': 'mg/dL' " +
-                " }," +
-                " 'effective_time_frame': {" +
-                " 'date_time': '"+date+"T00:00:00.000Z'" +
-                " }" +
-                " }," +
-                " {" +
-                " 'blood_glucose': {" +
-                " 'value': 1.3," +
-                "'unit': 'mg/dL'" +
-                "}, " +
-                " 'effective_time_frame': {" +
-                " 'date_time': '"+date+"T00:00:00.000Z'}" +
-                "}" +
-                "]" +
-                "}}";
+
+        if (measure.equals("blood_glucose")) { //3 entries for blood glucose on a given date
+            response = " {'shim': null," +
+                    " 'timeStamp': 1416423277," +
+                    " 'body': {" +
+                    " 'blood_glucose': [" +
+                    " { " +
+                    " 'blood_glucose': {" +
+                    " 'value': 1.1, " +
+                    " 'unit': 'mg/dL'" +
+                    " }," +
+                    " 'effective_time_frame': {" +
+                    " 'date_time': '" + date + "T01:00:00.000Z'" +
+                    " }" +
+                    " }," +
+                    " { " +
+                    " 'blood_glucose': { " +
+                    " 'value': 1.2," +
+                    " 'unit': 'mg/dL' " +
+                    " }," +
+                    " 'effective_time_frame': {" +
+                    " 'date_time': '" + date + "T02:00:00.000Z'" +
+                    " }" +
+                    " }," +
+                    " {" +
+                    " 'blood_glucose': {" +
+                    " 'value': 1.3," +
+                    " 'unit': 'mg/dL'" +
+                    "}, " +
+                    " 'effective_time_frame': {" +
+                    " 'date_time': '" + date + "T03:00:00.000Z'}" +
+                    "}" +
+                    "]" +
+                    "}}";
+        } else if (measure.equals("blood_pressure")) { //1 entry for blood pressure on a given date
+            response = " {'shim': null," +
+                    " 'timeStamp': 1416423277," +
+                    " 'body': {" +
+                    " 'blood_pressure': [" +
+                    " { " +
+                    " 'systolic_blood_pressure': {" +
+                    " 'value': 100, " +
+                    " 'unit': 'mmHg'" +
+                    " }," +
+                    " 'diastolic_blood_pressure': {" +
+                    " 'value': 60," +
+                    " 'unit': 'mmHg'" +
+                    " }," +
+                    " 'effective_time_frame': {" +
+                    " 'time_interval': {" +
+                    " 'start_date_time': '"+date+"T07:25:00Z'," +
+                    " 'end_date_time': '"+date+"T08:25:00Z' " +
+                    " }" +
+                    " }," +
+                    " 'position_during_measurement': 'sitting'," +
+                    " 'descriptive_statistic': 'minimum'," +
+                    " 'user_notes': 'I felt quite dizzy'" +
+                    " } " +
+                    " ] " +
+                    "}} ";
+        } else if (measure.equals("step_count")) { //various number of entries (varying based on date between 1 and 2) included to prove that we can handle various numbers of entries per day
+            int count = (Character.getNumericValue(date.charAt(date.length()-1))%2)+1;
+            int val = 6000;
+            String entries = "";
+            for (int i = 0; i < count; i++) {
+                String entry = " { " +
+                        " 'step_count': " + Integer.toString(val * (i+1)) + "," +
+                        " 'effective_time_frame': {" +
+                        " 'start_time': '" + date + "T06:25:00Z'," +
+                        " 'end_time': '" + date + "T07:25:00Z' " +
+                        " } " +
+                        " } ";
+                if (i == count - 1) {
+                    entries += entry;
+                } else {
+                    entries += (entry +",");
+                }
+            }
+            Log.d(TAG, "entries: " + entries);
+            response = " {'shim': null," +
+                    " 'timeStamp': 1416423277," +
+                    " 'body': {" +
+                    " 'step_count': [" + entries +
+                    " ]}}";
+
+        } else if (measure.equals("physical_activity")) { //random physical activities chosen so that we can make a pie chart with the resulting data
+            String[] activities = {"walking", "walking", "walking", "running", "running", "sprinting"};
+            String[] intensities = {"light", "light", "light", "moderate", "moderate", "vigorous"}; //consistent with open mHealth format
+            int index = randInt(0,5); //random int used to select from the activities and their corresponding intensities above
+            response = " {'shim': null," +
+                    " 'timeStamp': 1416423277," +
+                    " 'body': {" +
+                    " 'physical_activity': [" +
+                    " { " +
+                    " 'activity_name': '" + activities[index] + "', " +
+                    " 'distance': { " +
+                    " 'value': 1.5, " +
+                    " 'unit': 'mi' " +
+                    " }, " +
+                    " 'reported_activity_intensity': '" + intensities[index] + "', " +
+                    " 'effective_time_frame': { " +
+                    " 'time_interval': { " +
+                    " 'date': '2013-02-05'," +
+                    " 'part_of_day': 'morning' " +
+                    " } " +
+                    " } " +
+                    " } " +
+                    " ]}}";
+        }
         Log.d(TAG, "getTestResponse: " + response);
         return response;
+    }
+
+    /**
+     *
+     * @param min: The lowest integer in the range
+     * @param max: The highest integer in the range
+     * @return a random integer between min and max
+     */
+    private int randInt(int min, int max) {
+        // variable so that it is not re-seeded every call.
+        Random rand = new Random();
+
+        // nextInt is normally exclusive of the top value,
+        // so add 1 to make it inclusive
+        int randomNum = rand.nextInt((max - min) + 1) + min;
+
+        return randomNum;
     }
 
     /**
@@ -227,44 +346,30 @@ public class RequestImport extends Activity {
      *
      * @param response the response from a data query. Expect it to be parseable into a JSON Object.
      * @param deviceType the type of device this response is for
-     * @param dateString the date on which the data was recorded
+     * @param date the date on which the data was recorded
      */
-    private void processRequest(String response, String dateString, String deviceType){
+    private void processRequest(String response, String date, String deviceType){
         Log.d(TAG, "in processRequest");
         JSONObject temp;
-        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
-        sdf.setLenient(false);
-        Date date = null;
-        try {
-            date = sdf.parse(dateString);
-        } catch (ParseException e) {
-            Log.i(TAG, "processRequest parsing error");
-            date = new Date();
-        }
         String MAIN_KEY = "body";  // The main key in the JSON response
         try {
             Log.i(TAG, response);
             JSONObject obj = new JSONObject(response);
-
             JSONObject body = obj.getJSONObject(MAIN_KEY);
             Iterator<String> field_name_iterator = body.keys();
             String fieldName = field_name_iterator.next();
-            Log.d(TAG, "Field_name: " + fieldName);
-            //extract field name as string from key in body
-            //get JSON array from body using fieldName
-            JSONArray dataArray = body.getJSONArray(fieldName);
-            //once we get array, iterate through list of entries
-            for(int i = 0; i< dataArray.length(); i++){
+            Log.d(TAG, "Field_name: " + fieldName); //extract field name as string from inside "body"
+            JSONArray dataArray = body.getJSONArray(fieldName); //get JSON array from "body"
+            for(int i = 0; i< dataArray.length(); i++){ //iterate through array entries
                 temp = dataArray.getJSONObject(i);
-                createTableEntry(date, i, fieldName, fieldName, temp, deviceType);
+                //TODO: remove entry numbers and use an entry ID instead
+                createTableEntry(date, i, fieldName, "", temp, deviceType); //enter in table
             }
 
             Log.d(TAG, "processRequest: processed field " + fieldName);
 
-            // For now, print out the new table
             // Get the database
             SQLiteDatabase db = mDbHelper.getReadableDatabase();
-            //mRequestResponse.setText(mDbHelper.getTableAsString(db, fieldName));
 
         } catch (Throwable t) {
             Log.e(TAG, "Error in processRequest while parsing: \"" + response + "\": " + t.toString());
@@ -273,30 +378,32 @@ public class RequestImport extends Activity {
     }
 
     /**
-     * A recursive function that constructs an
-     * TODO finish this documentation. also, rename function to be more understandable? (I'm not
-     *   sure what table we're referring to)
-     * TODO remove the first redundant fieldname - we get field name: blood_glucose$blood_glucose$value
-     *   but we want just blood_glucose$value
+     * A recursive function that creates the key for each entry in our database and then
      *
-     * @param date
-     * @param entryNum
-     * @param tableName
-     * @param fieldName
-     * @param entry
-     * @param deviceType
+     * @param date: the date on which the data was recorded
+     * @param entryNum: an integer indexing this entry in a particular date. This combines with the date field to provide a unique key for a given entry //TODO: remove and replace with IDs
+     * @param tableName: which table to alter (i.e. blood_glucose)
+     * @param fieldName: the name of the key for this entry (or in other words, its new column header in a SQL table)
+     * @param entry: the JSON object from which the data is stored (entry is the DSU, essentially)
+     * @param deviceType: The wearable (or 'Test' device) to query data for
      */
-    private void createTableEntry(Date date, int entryNum, String tableName, String fieldName, JSONObject entry, String deviceType){
+    private void createTableEntry(String date, int entryNum, String tableName, String fieldName, JSONObject entry, String deviceType){
         Log.d(TAG, "in createTableEntry");
         Iterator<String> fields = entry.keys();
         String currKey;
         while(fields.hasNext()){
             currKey = fields.next();
             try {
-                if (entry.get(currKey) instanceof JSONObject) {
-                    createTableEntry(date, entryNum, tableName, fieldName + "$" + currKey, entry.getJSONObject(currKey), deviceType);
+                String key;
+                if (fieldName.equals("")) {
+                    key = currKey;
                 } else {
-                    insertInTable(date, entryNum, tableName, fieldName + "$" + currKey, entry.getString(currKey), deviceType);
+                    key = fieldName + "$" + currKey;
+                }
+                if (entry.get(currKey) instanceof JSONObject) {
+                    createTableEntry(date, entryNum, tableName, key, entry.getJSONObject(currKey), deviceType);
+                } else {
+                    insertInTable(date, entryNum, tableName, key, entry.getString(currKey), deviceType);
                 }
             } catch (Throwable t){
                 Log.e(TAG, "Error in createTable while parsing: \"" + entry + "\": " + t.toString());
@@ -318,7 +425,7 @@ public class RequestImport extends Activity {
      * @param deviceType: the value of the cell to be altered as a string.
      * @return the row ID that the value was inserted into
      */
-    private long insertInTable(Date date, int entryNum, String tableName,
+    private long insertInTable(String date, int entryNum, String tableName,
                              String fieldName, String value, String deviceType) {
 
         String message = "field name: " + fieldName +"\nvalue: " + value + "\nentryNum: " + entryNum;
@@ -337,10 +444,10 @@ public class RequestImport extends Activity {
         SQLiteDatabase db = mDbHelper.getWritableDatabase();
 
         // Create a set of values for inserting into the DB
-        String dateString = date.toString();
+        //String dateString = date.toString();
 
         ContentValues values = new ContentValues();
-        values.put(DSUDbContract.TableEntry.DATE_COLUMN_NAME, dateString);
+        values.put(DSUDbContract.TableEntry.DATE_COLUMN_NAME, date);
         values.put(DSUDbContract.TableEntry.ENTRYNUM_COLUMN_NAME, entryNum);
         values.put(DSUDbContract.TableEntry.DEVICE_COLUMN_NAME, deviceType);
 

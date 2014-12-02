@@ -140,7 +140,7 @@ public class RequestMain extends Activity {
         // the database instead, but for testing we want to make it a clean slate.
         try {
             String dbName = mDbHelper.getDatabaseName();
-            //this.deleteDatabase(dbName);
+            this.deleteDatabase(dbName);
             Log.d(TAG, "onStop: db destroyed: " + dbName);
         } catch (SQLiteException e) {
             // Do nothing

@@ -17,6 +17,16 @@
         <item>RunKeeper</item>
         <item>Withings</item>
     </string-array>
+    <string-array name="device_array2">
+        <item>All Devices</item>
+        <item>Test</item>
+        <item>Fitbit</item>
+        <item>Fat Secret</item>
+        <item>Microsoft HealthVault</item>
+        <item>Jawbone UP</item>
+        <item>RunKeeper</item>
+        <item>Withings</item>
+    </string-array>
     <!--For main screen-->
     <string name="view_button">View Database</string>
     <string name="import_button">Import DSUs</string>
@@ -26,4 +36,5 @@
     <string name="table_name_header">Database Tables</string>
     <string name="view_table_button">View Table!</string>
 
+    <string name="start_date">Select Start Date</string>
 </resources>
