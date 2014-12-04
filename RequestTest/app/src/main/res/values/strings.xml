@@ -32,6 +32,7 @@
     <string name="import_button">Import DSUs</string>
     <string name="export_button">Export Database</string>
     <string name="visualize_button">Create Visualizations</string>
+    <string name="destroy_button">Destroy Database</string>
     <!--For view screen-->
     <string name="table_name_header">Database Tables</string>
     <string name="view_table_button">View Table!</string>

@@ -24,6 +24,7 @@ public class RequestMain extends Activity {
     private Button mImportButton;
     private Button mExportButton;
     private Button mVisualizeButton;
+    private Button mDestroyButton;
     private TextView mGreetingView;
     private DSUDbHelper mDbHelper;
 
@@ -31,6 +32,7 @@ public class RequestMain extends Activity {
     private final int viewRequestCode = 1;
     private final int exportRequestCode = 2;
     private final int visualizeRequestCode = 3;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -47,6 +49,7 @@ public class RequestMain extends Activity {
         mImportButton = (Button)findViewById(R.id.import_button);
         mExportButton = (Button)findViewById(R.id.export_button);
         mVisualizeButton = (Button)findViewById(R.id.visualize_button);
+        mDestroyButton = (Button)findViewById(R.id.destroy_button);
         mGreetingView = (TextView)findViewById(R.id.greeting_view);
 
         mGreetingView.setText(GREETING);
@@ -80,6 +83,12 @@ public class RequestMain extends Activity {
             public void onClick(View v) {
                 Intent intent = new Intent(RequestMain.this, RequestVisualize.class);
                 startActivityForResult(intent, visualizeRequestCode);
+            }
+        });
+        mDestroyButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v){
+                destroyDB();
             }
         });
     }
@@ -139,15 +148,29 @@ public class RequestMain extends Activity {
     protected void onDestroy() {
         // Wipe the database that was created. In production code we'd probably want to write
         // the database instead, but for testing we want to make it a clean slate.
+        //try {
+        //    String dbName = mDbHelper.getDatabaseName();
+        //   mDbHelper.close();
+        //    this.deleteDatabase(dbName);
+        //    Log.d(TAG, "onDestroy: db destroyed: " + dbName);
+        //} catch (SQLiteException e) {
+            // Do nothing
+        //    Log.d(TAG, "onDestroy: exception caught. " + e);
+        //}
+        super.onDestroy();
+    }
+
+
+
+    private void destroyDB(){
         try {
             String dbName = mDbHelper.getDatabaseName();
             mDbHelper.close();
             this.deleteDatabase(dbName);
-            Log.d(TAG, "onDestroy: db destroyed: " + dbName);
+            Log.d(TAG, "destroyDB: db destroyed: " + dbName);
         } catch (SQLiteException e) {
-            // Do nothing
-            Log.d(TAG, "onDestroy: exception caught. " + e);
+            //Do nothing
+            Log.d(TAG, "destroyDB: exception caught. " + e);
         }
-        super.onDestroy();
     }
 }

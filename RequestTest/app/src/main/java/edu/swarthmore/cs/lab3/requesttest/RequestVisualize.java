@@ -7,6 +7,7 @@ import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.os.Bundle;
 import android.util.Log;
+import android.util.Pair;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
@@ -22,8 +23,17 @@ import com.androidplot.xy.SimpleXYSeries;
 import com.androidplot.xy.XYPlot;
 import com.androidplot.xy.XYSeries;
 
+import java.text.FieldPosition;
+import java.text.Format;
+import java.text.MessageFormat;
+import java.text.ParseException;
+import java.text.ParsePosition;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Calendar;
+import java.util.Date;
+import java.util.List;
 
 /**
  * Created by awan1 on 11/23/14.
@@ -38,6 +48,7 @@ public class RequestVisualize extends Activity  {
     private DSUDbHelper mDbHelper;
     private XYPlot mPlot;
     private static final String TAG = "RequestVisualize";
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -160,17 +171,33 @@ public class RequestVisualize extends Activity  {
         mPlot.setRangeLabel("Range");
 
         // Create a couple arrays of y-values to mPlot:
-        Number[] series1Numbers = {1, 8, 5, 2, 7, 4};
-        Number[] series2Numbers = {4, 6, 3, 8, 2, 10};
+        Pair<ArrayList<Number>, ArrayList<Number>> valuePair = getValues();
+        ArrayList<Number> values = valuePair.first;
+        ArrayList<Number> dates = valuePair.second;
+        Log.i(TAG, "values array: "+values.toString() );
+        Log.i(TAG, "dates array: " + dates.toString());
+        //Number[] series1Numbers = {1, 8, 5, 2, 7, 4};
+        Number[] series2Numbers = {0, 1, 1.1, 0.9, 1.4};
+        Number[] years = {
+                978307200,  // 2001
+                1009843200, // 2002
+                1041379200, // 2003
+                1072915200, // 2004
+                1104537600  // 2005
+        };
+
+        //String physicalActivity = getActivityValues();
 
         // Turn the above arrays into XYSeries':
         XYSeries series1 = new SimpleXYSeries(
-                Arrays.asList(series1Numbers),          // SimpleXYSeries takes a List so turn our array into a List
-                SimpleXYSeries.ArrayFormat.Y_VALS_ONLY, // Y_VALS_ONLY means use the element index as the x value
+                 dates,
+                //Arrays.asList(series1Numbers),          // SimpleXYSeries takes a List so turn our array into a List
+                values, // Y_VALS_ONLY means use the element index as the x value
                 "Series1");                             // Set the display title of the series
 
         // same as above
-        XYSeries series2 = new SimpleXYSeries(Arrays.asList(series2Numbers), SimpleXYSeries.ArrayFormat.Y_VALS_ONLY, "Series2");
+        //XYSeries series2 = new SimpleXYSeries(Arrays.asList(series2Numbers), SimpleXYSeries.ArrayFormat.Y_VALS_ONLY, "Series2");
+        XYSeries series2 = new SimpleXYSeries( Arrays.asList(years), Arrays.asList(series2Numbers), "Series 2");
 
         // Create a formatter to use for drawing a series using LineAndPointRenderer
         // and configure it from xml:
@@ -187,14 +214,39 @@ public class RequestVisualize extends Activity  {
         series2Format.setPointLabelFormatter(new PointLabelFormatter());
         series2Format.configure(getApplicationContext(),
                 R.xml.line_point_formatter_with_plf2);
-        mPlot.addSeries(series2, series2Format);
+        //mPlot.addSeries(series2, series2Format);
 
         // reduce the number of range labels
         mPlot.setTicksPerRangeLabel(3);
         mPlot.getGraphWidget().setDomainLabelOrientation(-45);
 
+        mPlot.setDomainValueFormat(new Format() {
+
+            // create a simple date format that draws on the year portion of our timestamp.
+            // see http://download.oracle.com/javase/1.4.2/docs/api/java/text/SimpleDateFormat.html
+            // for a full description of SimpleDateFormat.
+            private SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy/MM/dd");
+
+            @Override
+            public StringBuffer format(Object obj, StringBuffer toAppendTo, FieldPosition pos) {
+
+                // because our timestamps are in seconds and SimpleDateFormat expects milliseconds
+                // we multiply our timestamp by 1000:
+                long timestamp = ((Number) obj).longValue();
+                Date date = new Date(timestamp);
+                return dateFormat.format(date, toAppendTo, pos);
+            }
+
+            @Override
+            public Object parseObject(String source, ParsePosition pos) {
+                return null;
+
+            }
+        });
+
         // redraw the plot
         mPlot.redraw();
+        //Log.i(TAG, "values string: " + physicalActivity);
     }
 
     @Override
@@ -221,5 +273,49 @@ public class RequestVisualize extends Activity  {
         Intent return_intent = new Intent(RequestVisualize.this, RequestMain.class);
         setResult(Activity.RESULT_OK, return_intent);
         super.onStop();
+    }
+
+    private Pair<ArrayList<Number>, ArrayList<Number>> getValues(){
+        ArrayList<Number> values = new ArrayList<Number>();
+        ArrayList<Number> dates = new ArrayList<Number>();
+        String dateString;
+        Date date;
+        long dateInMs;
+        Calendar calendar = Calendar.getInstance();
+        SQLiteDatabase db = mDbHelper.getWritableDatabase();
+        String dateStart = "2014-01-01";
+        String dateEnd = "2014-01-07";
+        Cursor c = mDbHelper.selectItems(db,mTableName, "Test", dateStart, dateEnd);
+        if (c.moveToFirst() ){
+            String[] columnNames = c.getColumnNames();
+            do {
+                for (String name: columnNames) {
+                    if (name.contains("value")) {
+                        values.add(c.getFloat(c.getColumnIndex(name)));
+                    }
+                    if(name.equals("Date")){
+                        dateString = c.getString(c.getColumnIndex(name));
+                        SimpleDateFormat  format = new SimpleDateFormat("yyyy-MM-dd");
+                        try{
+                            date = format.parse(dateString);
+                            calendar.setTime(date);
+                            dateInMs = calendar.getTimeInMillis();
+                            Log.i(TAG, "DATE: " + date.toString());
+                            dates.add(dateInMs);
+                        } catch (ParseException e) {
+                            e.printStackTrace();
+                        }
+
+                    }
+
+                    //+= MessageFormat.format("{0}, ",
+                            //c.getString(c.getColumnIndex(name)));
+                }
+
+            } while (c.moveToNext());
+        }
+        Pair<ArrayList<Number>, ArrayList<Number>> returnPair = new Pair(values,dates);
+        return returnPair;
+
     }
 }
