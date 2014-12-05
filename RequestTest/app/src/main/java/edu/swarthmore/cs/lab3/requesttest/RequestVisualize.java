@@ -22,6 +22,7 @@ import com.androidplot.xy.PointLabelFormatter;
 import com.androidplot.xy.SimpleXYSeries;
 import com.androidplot.xy.XYPlot;
 import com.androidplot.xy.XYSeries;
+import com.androidplot.xy.XYStepMode;
 
 import java.text.FieldPosition;
 import java.text.Format;
@@ -48,6 +49,8 @@ public class RequestVisualize extends Activity  {
     private DSUDbHelper mDbHelper;
     private XYPlot mPlot;
     private static final String TAG = "RequestVisualize";
+    private String mRange;
+    private String mDomain;
 
 
     @Override
@@ -167,8 +170,8 @@ public class RequestVisualize extends Activity  {
     private void doPlot() {
         // Set labels
         mPlot.setTitle(mVisualizationName + " plot for " + mTableName);
-        mPlot.setDomainLabel("Domain");
-        mPlot.setRangeLabel("Range");
+        mDomain = "Date";
+        mRange = mTableName+ " (";
 
         // Create a couple arrays of y-values to mPlot:
         Pair<ArrayList<Number>, ArrayList<Number>> valuePair = getValues();
@@ -176,17 +179,9 @@ public class RequestVisualize extends Activity  {
         ArrayList<Number> dates = valuePair.second;
         Log.i(TAG, "values array: "+values.toString() );
         Log.i(TAG, "dates array: " + dates.toString());
-        //Number[] series1Numbers = {1, 8, 5, 2, 7, 4};
-        Number[] series2Numbers = {0, 1, 1.1, 0.9, 1.4};
-        Number[] years = {
-                978307200,  // 2001
-                1009843200, // 2002
-                1041379200, // 2003
-                1072915200, // 2004
-                1104537600  // 2005
-        };
 
-        //String physicalActivity = getActivityValues();
+        mPlot.setDomainLabel(mDomain);
+        mPlot.setRangeLabel(mRange);
 
         // Turn the above arrays into XYSeries':
         XYSeries series1 = new SimpleXYSeries(
@@ -195,9 +190,6 @@ public class RequestVisualize extends Activity  {
                 values, // Y_VALS_ONLY means use the element index as the x value
                 "Series1");                             // Set the display title of the series
 
-        // same as above
-        //XYSeries series2 = new SimpleXYSeries(Arrays.asList(series2Numbers), SimpleXYSeries.ArrayFormat.Y_VALS_ONLY, "Series2");
-        XYSeries series2 = new SimpleXYSeries( Arrays.asList(years), Arrays.asList(series2Numbers), "Series 2");
 
         // Create a formatter to use for drawing a series using LineAndPointRenderer
         // and configure it from xml:
@@ -208,13 +200,6 @@ public class RequestVisualize extends Activity  {
 
         // add a new series' to the xyplot:
         mPlot.addSeries(series1, series1Format);
-
-        // same as above:
-        LineAndPointFormatter series2Format = new LineAndPointFormatter();
-        series2Format.setPointLabelFormatter(new PointLabelFormatter());
-        series2Format.configure(getApplicationContext(),
-                R.xml.line_point_formatter_with_plf2);
-        //mPlot.addSeries(series2, series2Format);
 
         // reduce the number of range labels
         mPlot.setTicksPerRangeLabel(3);
@@ -243,10 +228,11 @@ public class RequestVisualize extends Activity  {
 
             }
         });
+        //one mark per day
+        mPlot.setDomainStep(XYStepMode.INCREMENT_BY_VAL, 86400000);
 
         // redraw the plot
         mPlot.redraw();
-        //Log.i(TAG, "values string: " + physicalActivity);
     }
 
     @Override
@@ -281,8 +267,10 @@ public class RequestVisualize extends Activity  {
         String dateString;
         Date date;
         long dateInMs;
+        int set = 0;
         Calendar calendar = Calendar.getInstance();
         SQLiteDatabase db = mDbHelper.getWritableDatabase();
+        //could get these values from a spinner
         String dateStart = "2014-01-01";
         String dateEnd = "2014-01-07";
         Cursor c = mDbHelper.selectItems(db,mTableName, "Test", dateStart, dateEnd);
@@ -292,6 +280,10 @@ public class RequestVisualize extends Activity  {
                 for (String name: columnNames) {
                     if (name.contains("value")) {
                         values.add(c.getFloat(c.getColumnIndex(name)));
+                    }
+                    if (name.contains("unit") && (set == 0)){
+                        mRange = mRange + c.getString(c.getColumnIndex(name)) + ")";
+                        set = 1;
                     }
                     if(name.equals("Date")){
                         dateString = c.getString(c.getColumnIndex(name));
