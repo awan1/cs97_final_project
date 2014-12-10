@@ -40,4 +40,11 @@
         android:layout_height="wrap_content"
         android:text="@string/visualize_button" />
 
+    <Button
+        android:id="@+id/destroy_button"
+        android:layout_margin="@dimen/main_button_padding"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/destroy_button" />
+
 </LinearLayout>

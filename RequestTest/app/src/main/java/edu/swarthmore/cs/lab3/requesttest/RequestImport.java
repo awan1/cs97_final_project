@@ -54,6 +54,8 @@ public class RequestImport extends Activity {
 
     private static final String TAG = "RequestImport";
 
+
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -117,7 +119,7 @@ public class RequestImport extends Activity {
 
         String dateStart = "2014-01-01"; //TODO: select using date picker
         String dateEnd = "2014-01-07"; //TODO: select using date picker
-        String measure = "physical_activity"; //TODO: select using spinner
+        String measure = "blood_glucose"; //TODO: select using spinner
 
         makeRequestByDate(deviceType, userId, dateStart, dateEnd, measure);
     }
@@ -490,4 +492,5 @@ public class RequestImport extends Activity {
         setResult(Activity.RESULT_OK, return_intent);
         super.onStop();
     }
+
 }
