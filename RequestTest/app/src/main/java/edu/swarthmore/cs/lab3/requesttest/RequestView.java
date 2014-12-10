@@ -15,6 +15,7 @@ import android.widget.Button;
 import android.widget.Spinner;
 import android.widget.TextView;
 
+import java.text.MessageFormat;
 import java.util.ArrayList;
 
 /**
@@ -22,6 +23,8 @@ import java.util.ArrayList;
  * Activity to view the stored SQL tables
  */
 public class RequestView extends Activity {
+    private Spinner mDeviceTypeSpinner;
+    private String mDeviceType;
     private Spinner mTableSpinner;
     private String mTableName;
     private TextView mTableView;
@@ -29,6 +32,8 @@ public class RequestView extends Activity {
     private DSUDbHelper mDbHelper;
 
     private static final String TAG = "RequestView";
+
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -51,6 +56,56 @@ public class RequestView extends Activity {
             @Override
             public void onClick(View v) {
                 viewTable();
+            }
+        });
+    }
+
+    private void buildDeviceTypeSpinner() {
+        mDeviceTypeSpinner = (Spinner) findViewById(R.id.device_type_spinner);
+        // Figure out the names of tables in the database
+        final ArrayList<String> tableArray = new ArrayList<String>();
+
+        SQLiteDatabase db = mDbHelper.getWritableDatabase();
+        String command = MessageFormat.format(
+                "SELECT DISTINCT {0} FROM {1}",
+                DSUDbContract.TableEntry.DEVICE_COLUMN_NAME,
+                mTableName
+        );
+
+        tableArray.add("All Devices");
+        Cursor c = db.rawQuery(command, null);
+        if (c.moveToFirst() ){
+            String[] columnNames = c.getColumnNames();
+            //Log.d(TAG, "columnNames: " + columnNames.toString());
+            do {
+                for (String name: columnNames) {
+                    tableArray.add(c.getString(c.getColumnIndex(name)));
+                }
+            } while (c.moveToNext());
+        }
+        c.close();
+
+        // Create an ArrayAdapter using the string array and a default spinner layout
+        ArrayAdapter<String> adapter = new ArrayAdapter<String>(this,
+                android.R.layout.simple_spinner_item, tableArray);
+        // Specify the layout to use when the list of choices appears
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        // Apply the adapter to the spinner
+        mDeviceTypeSpinner.setAdapter(adapter);
+
+        mDeviceTypeSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                mDeviceType = parent.getItemAtPosition(position).toString();
+                String msg = mDeviceType;
+                Log.d(TAG, msg);
+            }
+
+            @Override
+            public void onNothingSelected(AdapterView<?> parent) {
+                mDeviceType = null;
+                String msg = mDeviceType;
+                Log.d(TAG, msg);
             }
         });
     }
@@ -91,6 +146,7 @@ public class RequestView extends Activity {
             public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
                 mTableName = parent.getItemAtPosition(position).toString();
                 String msg = mTableName;
+                buildDeviceTypeSpinner();
                 Log.d(TAG, msg);
             }
 

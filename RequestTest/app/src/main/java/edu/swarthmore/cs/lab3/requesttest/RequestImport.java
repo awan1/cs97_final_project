@@ -1,14 +1,19 @@
 package edu.swarthmore.cs.lab3.requesttest;
 
 import android.app.Activity;
+import android.app.DatePickerDialog;
+import android.app.Dialog;
 import android.app.DialogFragment;
 import android.app.Fragment;
 import android.app.FragmentManager;
+import android.app.ListFragment;
 import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
+import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 
+import android.net.Uri;
 import android.os.Build;
 
 import android.os.Bundle;
@@ -28,6 +33,7 @@ import org.json.JSONObject;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Calendar;
 
 import java.util.Date;
@@ -43,14 +49,26 @@ import android.widget.Spinner;
 /**
  * Activity to make and process requests.
  */
-public class RequestImport extends Activity {
+public class RequestImport extends Activity implements DatePickerFragment.OnDateSetListener {
 
     private Spinner mDeviceTypeSpinner;
+    private Spinner mMeasureTypeSpinner;
+    private String mMeasureTableName;
     private String mDeviceType;
-    private EditText mUserIDText;
     private Button mMakeRequestButton;
     private TextView mRequestResponse;
     private DSUDbHelper mDbHelper;
+
+    private Button mStartDateButton;
+    private Button mEndDateButton;
+
+    private int mStartMonth; //months are 0-based
+    private int mStartDay;
+    private int mStartYear;
+
+    private int mEndMonth; //months are 0-based
+    private int mEndDay;
+    private int mEndYear;
 
     private static final String TAG = "RequestImport";
 
@@ -64,14 +82,43 @@ public class RequestImport extends Activity {
         Context myContext = RequestImport.this;
         mDbHelper = new DSUDbHelper(myContext);
 
-        // Find components
+        makeDeviceTypeSpinner();
+
+        //set up start date and end date buttons
+        setStartDateOnView();
+        setEndDateOnView();
+        addStartListenerOnButton();
+        addEndListenerOnButton();
+
+        makeRequestButton();
+
+        //Set up text view for request responses and make scrollable
         mRequestResponse = (TextView) findViewById(R.id.response_text);
-        mUserIDText = (EditText) findViewById(R.id.user_id);
-        mMakeRequestButton = (Button) findViewById(R.id.make_request_button);
-
-        // Make the request response scrollable
         mRequestResponse.setMovementMethod(new ScrollingMovementMethod());
+    }
 
+    public void makeRequestButton(){
+        mMakeRequestButton = (Button) findViewById(R.id.make_request_button);
+        mMakeRequestButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                String startDateString = dateToString(mStartYear, mStartMonth, mStartDay);
+                String endDateString = dateToString(mEndYear, mEndMonth, mEndDay);
+                boolean validRequest = makeRequestByDate(mDeviceType, startDateString, endDateString, mMeasureTableName);
+                if (validRequest) {
+                    mRequestResponse.setText("Import Complete!");
+                } else {
+                    mRequestResponse.setText("Invalid Import Request");
+                }
+            }
+        });
+    }
+
+    public String dateToString(int year, int month, int day){
+        return String.format("%d-%02d-%02d", year, month+1, day);
+    }
+
+    public void makeDeviceTypeSpinner(){
         mDeviceTypeSpinner = (Spinner) findViewById(R.id.device_type_spinner);
         // Create an ArrayAdapter using the string array and a default spinner layout
         ArrayAdapter<CharSequence> adapter = ArrayAdapter.createFromResource(this,
@@ -86,6 +133,7 @@ public class RequestImport extends Activity {
             public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
                 mDeviceType = parent.getItemAtPosition(position).toString();
                 String msg = mDeviceType;
+                makeMeasureTypeSpinner();
                 Log.d(TAG, msg);
             }
 
@@ -97,42 +145,133 @@ public class RequestImport extends Activity {
             }
         });
 
-        mMakeRequestButton.setOnClickListener(new View.OnClickListener() {
+    }
+
+    public void makeMeasureTypeSpinner(){
+
+        mMeasureTypeSpinner = (Spinner) findViewById(R.id.measure_type_spinner);
+        final ArrayList<String> tableArray = new ArrayList<String>();
+        if (mDeviceType.equals("Fitbit")){
+            tableArray.add("blood_glucose");
+        } else if (mDeviceType.equals("Test")){
+            tableArray.addAll(Arrays.asList("blood_glucose", "blood_pressure", "step_count", "physical_activity"));
+        }
+
+        ArrayAdapter<String> adapter = new ArrayAdapter<String>(this,
+                android.R.layout.simple_spinner_item, tableArray);
+        // Specify the layout to use when the list of choices appears
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        // Apply the adapter to the spinner
+        mMeasureTypeSpinner.setAdapter(adapter);
+
+        mMeasureTypeSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
             @Override
-            public void onClick(View v) {
-            makeRequest(mDeviceType, mUserIDText.getText().toString());
-            mRequestResponse.setText("Import Complete!");
+            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                mMeasureTableName = parent.getItemAtPosition(position).toString();
+                String msg = mMeasureTableName;
+                Log.d(TAG, msg);
+            }
+
+            @Override
+            public void onNothingSelected(AdapterView<?> parent) {
+                mMeasureTableName = null;
+                String msg = mMeasureTableName;
+                Log.d(TAG, msg);
             }
         });
     }
 
-    /**
-     * Helper function to make the request to the server.
-     * @param deviceType The wearable to query data for (or 'Test')
-     * @param userId The user ID
-     */
-    private void makeRequest(String deviceType, String userId) {
-        String msg = "device type: " + deviceType + " | userId: " + userId;
-        Log.d(TAG, msg);
+    public void onDateSetChangeDate(int year, int month, int day, boolean start){
+        if (start) {
+            mStartDay = day;
+            mStartMonth = month;
+            mStartYear = year;
+        } else {
+            mEndDay = day;
+            mEndMonth = month;
+            mEndYear = year;
+        }
+    }
 
-        String dateStart = "2014-01-01"; //TODO: select using date picker
-        String dateEnd = "2014-01-07"; //TODO: select using date picker
-        String measure = "physical_activity"; //TODO: select using spinner
+    public void setStartDateOnView() {
+        mStartDateButton = (Button) findViewById(R.id.select_start_date_button);
 
-        makeRequestByDate(deviceType, userId, dateStart, dateEnd, measure);
+        mStartMonth = 0; //months are 0-based
+        mStartDay = 1;
+        mStartYear = 2014;
+
+        // set current date into textview
+        mStartDateButton.setText(new StringBuilder()
+                // Month is 0 based, just add 1
+                .append(mStartMonth+1).append("-").append(mStartDay).append("-")
+                .append(mStartYear).append(" "));
+    }
+
+    public void setEndDateOnView() {
+        mEndDateButton = (Button) findViewById(R.id.select_end_date_button);
+
+        mEndMonth = 0; //months are 0-based
+        mEndDay = 7;
+        mEndYear = 2014;
+
+        // set current date into textview
+        mEndDateButton.setText(new StringBuilder()
+                // Month is 0 based, just add 1
+                .append(mEndMonth+1).append("-").append(mEndDay).append("-")
+                .append(mEndYear).append(" "));
+    }
+
+    public void addStartListenerOnButton() {
+        //Log.d(TAG, "addListenerOnButton: "+String.valueOf(mStartYear)+String.valueOf(mStartMonth)+String.valueOf(mStartDay));
+        mStartDateButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Bundle args = new Bundle();
+                args.putInt("day", mStartDay);
+                args.putInt("month", mStartMonth);
+                args.putInt("year", mStartYear);
+                args.putBoolean("start", true);
+                DialogFragment picker = new DatePickerFragment();
+                picker.setArguments(args);
+                picker.show(getFragmentManager(), "datePicker");
+            }
+        }
+
+        );
+    }
+
+    public void addEndListenerOnButton() {
+        //Log.d(TAG, "addListenerOnButton: "+String.valueOf(mStartYear)+String.valueOf(mStartMonth)+String.valueOf(mStartDay));
+        mEndDateButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Bundle args = new Bundle();
+                args.putInt("day", mEndDay);
+                args.putInt("month", mEndMonth);
+                args.putInt("year", mEndYear);
+                args.putBoolean("start", false);
+                DialogFragment picker = new DatePickerFragment();
+                picker.setArguments(args);
+                picker.show(getFragmentManager(), "datePicker");
+            }
+        }
+
+        );
     }
 
     /**
      *
      * @param deviceType: The wearable to query data for (or 'Test')
-     * @param userId: The user ID
      * @param dateStart: The first date in our range of dates to import
      * @param dateEnd: The last date in our range of dates to import (included)
      * @param measure: The measure that we are trying to access (i.e. blood_glucose)
      */
-    private void makeRequestByDate(String deviceType, String userId, String dateStart, String dateEnd, String measure) {
+    private boolean makeRequestByDate(String deviceType, String dateStart, String dateEnd, String measure) {
         String response = "";
         ArrayList<String> dates = getDates(dateStart, dateEnd); //array consisting of dates starting with dateStart and ending in dateEnd (inclusive)
+        if (dates.size() == 0) {
+            return false;
+        }
         ArrayList<String> responses = new ArrayList<String>(); //responses corresponding to the dates in the dates array
         for (int i = 0; i < dates.size(); i++) { //make a separate request for each date
             String date = dates.get(i);
@@ -144,7 +283,7 @@ public class RequestImport extends Activity {
                 //use the method below to handle threading issues
                 if( Build.VERSION.SDK_INT >= Build.VERSION_CODES.HONEYCOMB ) {
                     try {
-                        response = client.executeOnExecutor(client.THREAD_POOL_EXECUTOR, "http://130.58.68.129:8083/data/"+deviceType.toLowerCase()+"/blood_glucose?username="+userId+"&dateStart=" + date + "&dateEnd=" + date + "&normalize=true").get();
+                        response = client.executeOnExecutor(client.THREAD_POOL_EXECUTOR, "http://130.58.68.129:8083/data/"+deviceType.toLowerCase()+"/blood_glucose?username=superdock&dateStart=" + date + "&dateEnd=" + date + "&normalize=true").get();
                         //response = mRequestClient.executeOnExecutor(mRequestClient.THREAD_POOL_EXECUTOR, "http://130.58.68.129:8083/data/fitbit/blood_glucose?username=superdock&dateStart=" + date + "&dateEnd=" + date + "&normalize=true").get();
                     } catch (InterruptedException e) {
                         response = "Interrupted Exception caught.";
@@ -153,7 +292,7 @@ public class RequestImport extends Activity {
                     }
                 } else {
                     try {
-                        response = client.execute("http://130.58.68.129:8083/data/"+deviceType.toLowerCase()+"/blood_glucose?username="+userId+"&dateStart=" + date + "&dateEnd=" + date + "&normalize=true").get();
+                        response = client.execute("http://130.58.68.129:8083/data/"+deviceType.toLowerCase()+"/blood_glucose?username=superdock&dateStart=" + date + "&dateEnd=" + date + "&normalize=true").get();
                         //response = mRequestClient.execute("http://130.58.68.129:8083/data/fitbit/blood_glucose?username=superdock&dateStart=" + date + "&dateEnd=" + date + "&normalize=true").get();
                     } catch (InterruptedException e) {
                         response = "Interrupted Exception caught.";
@@ -171,6 +310,7 @@ public class RequestImport extends Activity {
             String d = dates.get(i);
             processRequest(r, d, deviceType);
         }
+        return true;
     }
 
     /**
@@ -183,6 +323,9 @@ public class RequestImport extends Activity {
 
         String date = dateStart;
         ArrayList<String> dates = new ArrayList<String>(); //list of dates as strings
+        if (stringDateIsGreaterThan(dateStart, dateEnd)){
+            return dates;
+        }
         dates.add(dateStart);
         while (true) {
             if (date.equals(dateEnd)){ //break at last date
@@ -195,11 +338,29 @@ public class RequestImport extends Activity {
             } catch (ParseException e) {
                 break;
             }
-            c.add(Calendar.DATE, 1);  // number of days to add
+            c.add(Calendar.DATE, 1);
             date = sdf.format(c.getTime());  // date is now the new date in our specified date format
             dates.add(date); //add date string to our list of dates
         }
         return dates;
+    }
+
+    private boolean stringDateIsGreaterThan(String dateStart, String dateEnd){
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
+        Calendar c1 = Calendar.getInstance();
+        Calendar c2 = Calendar.getInstance();
+        try {
+            c1.setTime(sdf.parse(dateStart));
+            c2.setTime(sdf.parse(dateEnd));
+        } catch (Throwable t) {
+            Log.e(TAG, "Error in stringDateIsGreaterThan in when parsing dates");
+            t.printStackTrace();
+        }
+        if (c1.getTime().getTime() > c2.getTime().getTime()) {
+            return true;
+        } else {
+            return false;
+        }
     }
 
     /**
@@ -318,6 +479,8 @@ public class RequestImport extends Activity {
                     " } " +
                     " } " +
                     " ]}}";
+        } else if (measure.equals("non_health_data")) {
+            response = " ";
         }
         Log.d(TAG, "getTestResponse: " + response);
         return response;
@@ -463,8 +626,6 @@ public class RequestImport extends Activity {
         db.close();
         return newRowId;
     }
-
-
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {

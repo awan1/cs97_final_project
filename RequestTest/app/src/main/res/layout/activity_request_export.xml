@@ -17,19 +17,6 @@
         android:gravity="center"
         android:layout_marginTop="20dp"
         >
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="@string/device_type_header"
-        android:textStyle="bold" />
-
-    <Spinner
-        android:id="@+id/device_type_spinner"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_gravity="center"
-        android:layout_marginBottom="10dp"
-        />
 
     <TextView
         android:layout_width="wrap_content"
@@ -43,6 +30,20 @@
         android:layout_height="wrap_content"
         android:layout_gravity="center"
         android:layout_marginBottom="10dp" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/device_type_header"
+        android:textStyle="bold" />
+
+    <Spinner
+        android:id="@+id/device_type_spinner"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:layout_marginBottom="10dp"
+    />
 
     <LinearLayout
         android:layout_width="wrap_content"

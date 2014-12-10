@@ -1,6 +1,7 @@
 package edu.swarthmore.cs.lab3.requesttest;
 
 import android.app.Activity;
+import android.app.DialogFragment;
 import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
@@ -23,9 +24,11 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 
+import java.text.MessageFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Calendar;
 
 import java.util.Date;
@@ -41,14 +44,28 @@ import android.widget.Spinner;
 /**
  * Activity to make and process requests.
  */
-public class RequestExport extends Activity {
+public class RequestExport extends Activity implements DatePickerFragment.OnDateSetListener {
 
     private Spinner mDeviceTypeSpinner;
     private String mDeviceType;
-    private EditText mUserIDText;
+
+    private Spinner mMeasureTypeSpinner;
+    private String mMeasureTableName;
+
     private Button mMakeRequestButton;
     private TextView mRequestResponse;
     private DSUDbHelper mDbHelper;
+
+    private Button mStartDateButton;
+    private Button mEndDateButton;
+
+    private int mStartMonth; //months are 0-based
+    private int mStartDay;
+    private int mStartYear;
+
+    private int mEndMonth; //months are 0-based
+    private int mEndDay;
+    private int mEndYear;
 
     private static final String TAG = "RequestExport";
 
@@ -56,32 +73,124 @@ public class RequestExport extends Activity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         Log.d(TAG, "RequestExport.onCreate called");
-        setContentView(R.layout.activity_request_import);
+        setContentView(R.layout.activity_request_export);
 
         // Get the SQL database interface
 
         Context myContext = RequestExport.this;
         mDbHelper = new DSUDbHelper(myContext);
 
+        makeMeasureTypeSpinner();
 
-        // Find components
+        setStartDateOnView();
+        setEndDateOnView();
+        addStartListenerOnButton();
+        addEndListenerOnButton();
+
+        makeRequestButton();
+
         mRequestResponse = (TextView) findViewById(R.id.response_text);
-        mUserIDText = (EditText) findViewById(R.id.user_id);
-        mMakeRequestButton = (Button) findViewById(R.id.make_request_button);
-
-        // Make the request response scrollable
         mRequestResponse.setMovementMethod(new ScrollingMovementMethod());
+    }
 
+    public void makeRequestButton(){
+        mMakeRequestButton = (Button) findViewById(R.id.make_request_button);
+        mMakeRequestButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                String startDateString = dateToString(mStartYear, mStartMonth, mStartDay);
+                String endDateString = dateToString(mEndYear, mEndMonth, mEndDay);
+                JSONObject DSU = exportDB(startDateString, endDateString);
+                String DSUstring = responseToJSONString(DSU.toString()); //converts DSU to string
+                Log.i(TAG, "DSU String: " + DSUstring);
+                mRequestResponse.setText(DSUstring);
+                return;
+                //mRequestResponse.setText("Export Complete!");
+            }
+        });
+    }
+
+    public String dateToString(int year, int month, int day){
+        return String.format("%d-%02d-%02d", year, month+1, day);
+    }
+
+    public String multiplyString(int count, String string){
+        int i = 0;
+        String newString = "";
+        while (i < count){
+            newString += string;
+            i++;
+        }
+        return newString;
+    }
+
+    public String responseToJSONString(String s){
+        String newString = "";
+        int tabs = 0;
+        String tabString = "   ";
+
+        for (int i = 0; i < s.length(); i++) {
+            char c = s.charAt(i);
+            if (c == '[') {
+                newString += " " + c + "\n";
+                tabs++;
+                newString += multiplyString(tabs, tabString);
+            } else if (c == '{') {
+                if (i != 0 && s.charAt(i-1) != '[' && s.charAt(i-1) != ',') {
+                    newString += " ";
+                }
+                newString += c + "\n";
+                tabs++;
+                newString += multiplyString(tabs, tabString);
+            } else if ((c == '}') || (c == ']')) {
+                newString += "\n";
+                tabs--;
+                newString += multiplyString(tabs, tabString) + c ;
+            } else if (c == ','){
+                newString += c + "\n" + multiplyString(tabs, tabString);
+            } else {
+                newString += c;
+            }
+        }
+
+        Log.d(TAG, newString);
+        return newString;
+    }
+
+    public void makeDeviceTypeSpinner(){
         mDeviceTypeSpinner = (Spinner) findViewById(R.id.device_type_spinner);
+        // Figure out the names of tables in the database
+        final ArrayList<String> tableArray = new ArrayList<String>();
+
+        SQLiteDatabase db = mDbHelper.getWritableDatabase();
+        String command = MessageFormat.format(
+                "SELECT DISTINCT {0} FROM {1}",
+                DSUDbContract.TableEntry.DEVICE_COLUMN_NAME,
+                mMeasureTableName
+        );
+
+        tableArray.add("All Devices");
+        Cursor c = db.rawQuery(command, null);
+        if (c.moveToFirst() ){
+            String[] columnNames = c.getColumnNames();
+            //Log.d(TAG, "columnNames: " + columnNames.toString());
+            do {
+                for (String name: columnNames) {
+                    tableArray.add(c.getString(c.getColumnIndex(name)));
+                }
+            } while (c.moveToNext());
+        }
+        c.close();
+
         // Create an ArrayAdapter using the string array and a default spinner layout
-        ArrayAdapter<CharSequence> adapter = ArrayAdapter.createFromResource(this,
-                R.array.device_array2, android.R.layout.simple_spinner_item);
+        ArrayAdapter<String> adapter = new ArrayAdapter<String>(this,
+                android.R.layout.simple_spinner_item, tableArray);
         // Specify the layout to use when the list of choices appears
         adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
         // Apply the adapter to the spinner
         mDeviceTypeSpinner.setAdapter(adapter);
 
-        mDeviceTypeSpinner.setOnItemSelectedListener( new AdapterView.OnItemSelectedListener() {
+        mDeviceTypeSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
             @Override
             public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
                 mDeviceType = parent.getItemAtPosition(position).toString();
@@ -96,15 +205,125 @@ public class RequestExport extends Activity {
                 Log.d(TAG, msg);
             }
         });
+    }
 
-        mMakeRequestButton.setOnClickListener(new View.OnClickListener() {
+    public void makeMeasureTypeSpinner(){
+
+        mMeasureTypeSpinner = (Spinner) findViewById(R.id.measure_type_spinner);
+        final ArrayList<String> tableArray = new ArrayList<String>();
+        String tableName;
+
+        SQLiteDatabase db = mDbHelper.getWritableDatabase();
+        Cursor c = db.rawQuery("SELECT name FROM sqlite_master WHERE type='table'", null);
+        if (c.moveToFirst()){
+            while ( !c.isAfterLast() ){
+                tableName = c.getString(c.getColumnIndex("name"));
+                if (!tableName.equals("android_metadata")) {
+                    tableArray.add(tableName);
+                }
+                c.moveToNext();
+            }
+        }
+        c.close();
+
+        // Create an ArrayAdapter using the string array and a default spinner layout
+        ArrayAdapter<String> adapter = new ArrayAdapter<String>(this,
+                android.R.layout.simple_spinner_item, tableArray);
+        // Specify the layout to use when the list of choices appears
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        // Apply the adapter to the spinner
+        mMeasureTypeSpinner.setAdapter(adapter);
+
+        mMeasureTypeSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
             @Override
-            public void onClick(View v) {
-                String tableName = "physical_activity";
-                exportDB(tableName, mDeviceType);
-                //display dsu
+            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                mMeasureTableName = parent.getItemAtPosition(position).toString();
+                String msg = mMeasureTableName;
+                makeDeviceTypeSpinner();
+                Log.d(TAG, msg);
+            }
+
+            @Override
+            public void onNothingSelected(AdapterView<?> parent) {
+                mMeasureTableName = null;
+                String msg = mMeasureTableName;
+                Log.d(TAG, msg);
             }
         });
+    }
+
+    public void onDateSetChangeDate(int year, int month, int day, boolean start){
+        if (start) {
+            mStartDay = day;
+            mStartMonth = month;
+            mStartYear = year;
+        } else {
+            mEndDay = day;
+            mEndMonth = month;
+            mEndYear = year;
+        }
+    }
+
+    public void setStartDateOnView() {
+        mStartDateButton = (Button) findViewById(R.id.select_start_date_button);
+
+        mStartMonth = 0; //months are 0-based
+        mStartDay = 1;
+        mStartYear = 2014;
+
+        // set current date into textview
+        mStartDateButton.setText(new StringBuilder()
+                // Month is 0 based, just add 1
+                .append(mStartMonth+1).append("-").append(mStartDay).append("-")
+                .append(mStartYear).append(" "));
+    }
+
+    public void setEndDateOnView() {
+        mEndDateButton = (Button) findViewById(R.id.select_end_date_button);
+
+        mEndMonth = 0; //months are 0-based
+        mEndDay = 1;
+        mEndYear = 2014;
+
+        // set current date into textview
+        mEndDateButton.setText(new StringBuilder()
+                // Month is 0 based, just add 1
+                .append(mEndMonth+1).append("-").append(mEndDay).append("-")
+                .append(mEndYear).append(" "));
+    }
+
+    public void addStartListenerOnButton() {
+        //Log.d(TAG, "addListenerOnButton: "+String.valueOf(mStartYear)+String.valueOf(mStartMonth)+String.valueOf(mStartDay));
+        mStartDateButton.setOnClickListener(new View.OnClickListener() {
+                                                @Override
+                                                public void onClick(View v) {
+            Bundle args = new Bundle();
+            args.putInt("day", mStartDay);
+            args.putInt("month", mStartMonth);
+            args.putInt("year", mStartYear);
+            args.putBoolean("start", true);
+            DialogFragment picker = new DatePickerFragment();
+            picker.setArguments(args);
+            picker.show(getFragmentManager(), "datePicker");
+           }
+                     });
+    }
+
+    public void addEndListenerOnButton() {
+        //Log.d(TAG, "addListenerOnButton: "+String.valueOf(mStartYear)+String.valueOf(mStartMonth)+String.valueOf(mStartDay));
+        mEndDateButton.setOnClickListener(new View.OnClickListener() {
+                                              @Override
+                                              public void onClick(View v) {
+            Bundle args = new Bundle();
+            args.putInt("day", mEndDay);
+            args.putInt("month", mEndMonth);
+            args.putInt("year", mEndYear);
+            args.putBoolean("start", false);
+            DialogFragment picker = new DatePickerFragment();
+            picker.setArguments(args);
+            picker.show(getFragmentManager(), "datePicker");
+            }
+                      });
     }
 
     //pull out information that was given to us
@@ -112,14 +331,10 @@ public class RequestExport extends Activity {
 
     /**
      *
-     * @param tableName: name of the table being accessed. i.e. blood_glucose
-     * @param deviceType: device type being accessed. i.e. fitbit, or test
      */
-    private void exportDB(String tableName, String deviceType){
-        String dateStart = "2014-01-01";
-        String dateEnd = "2014-01-07";
+    private JSONObject exportDB(String dateStart, String dateEnd){
         SQLiteDatabase db = mDbHelper.getWritableDatabase();
-        Cursor c = mDbHelper.selectItems(db, tableName, deviceType, dateStart, dateEnd); //query SQL database
+        Cursor c = mDbHelper.selectItems(db, mMeasureTableName, mDeviceType, dateStart, dateEnd); //query SQL database
 
         //section below is used for error checking up until "*********". TODO: remove
         String tableString = "";
@@ -139,12 +354,9 @@ public class RequestExport extends Activity {
         //****************************************************
 
         //takes the results of the query and converts it into a JSONObject (in DSU format)
-        JSONObject DSU = convertSelectionToDSU(c, tableName);
-        String DSUstring = DSU.toString(); //converts DSU to string
+        JSONObject DSU = convertSelectionToDSU(c, mMeasureTableName);
 
-        Log.i(TAG, "DSU String: " + DSUstring);
-
-        return;
+        return DSU;
     }
 
     /**
