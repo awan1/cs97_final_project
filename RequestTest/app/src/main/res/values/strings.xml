@@ -7,7 +7,9 @@
     <string name="user_id">Enter User ID</string>
     <string name="make_request_button">Make Request!</string>
     <string name="device_type_header">Device Type</string>
+    <string name="measure_type_header">Measurement Type</string>
     <string name="username_header">Username</string>
+
     <string-array name="device_array">
         <item>Test</item>
         <item>Fitbit</item>
@@ -17,6 +19,8 @@
         <item>RunKeeper</item>
         <item>Withings</item>
     </string-array>
+
+
     <string-array name="device_array2">
         <item>All Devices</item>
         <item>Test</item>
@@ -27,6 +31,8 @@
         <item>RunKeeper</item>
         <item>Withings</item>
     </string-array>
+
+
     <!--For main screen-->
     <string name="view_button">View Database</string>
     <string name="import_button">Import DSUs</string>
@@ -46,4 +52,5 @@
 
 
     <string name="start_date">Select Start Date</string>
+    <string name="end_date">Select End Date</string>
 </resources>

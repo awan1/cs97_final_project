@@ -162,7 +162,7 @@ public class DSUDbHelper extends SQLiteOpenHelper {
         Cursor c = null;
         String ALL_DEVICES = "All Devices";
 
-        //convert dates into integers of the format YYYYMMDD
+        //convert dates into integers of the format YYYYMMDD for queries
         dateStart = dateStart.replace("-","");
         dateEnd = dateEnd.replace("-","");
         String command;
@@ -196,7 +196,7 @@ public class DSUDbHelper extends SQLiteOpenHelper {
             // Try to select the given column. This throws an error if the field doesn't exist.
             c = db.rawQuery(command, null);
         } catch (SQLiteException e) {
-            Log.e(TAG, "Error. Invalid Select Command:" + command);
+            Log.e(TAG, "Error. Invalid Select Command: " + command);
         }
         /*
         //this is used only for error checking purposes, up until ****
