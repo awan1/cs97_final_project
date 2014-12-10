@@ -96,6 +96,7 @@ public class DSUDbHelper extends SQLiteOpenHelper {
     public long addItem(SQLiteDatabase db, String tableName, String fieldName, ContentValues values,
                         boolean valueIsDouble) {
         Log.d(TAG, "addItem called");
+        Log.d(TAG, "addItem: tableName " + tableName + " fieldName " + fieldName + " values " + values);
 
         // Create the table if it doesn't exist
         createTableIfNotExisting(db, tableName);
@@ -264,6 +265,8 @@ public class DSUDbHelper extends SQLiteOpenHelper {
 
             } while (allRows.moveToNext());
         }
+
+        Log.d(TAG, "getTableAsString" + tableString);
 
         return tableString;
     }

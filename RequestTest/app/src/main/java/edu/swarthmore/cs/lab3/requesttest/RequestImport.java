@@ -309,6 +309,7 @@ public class RequestImport extends Activity implements DatePickerFragment.OnDate
         //process request for each date in our date range
         for (int i = 0; i < responses.size(); i++) {
             String r = responses.get(i);
+            Log.d(TAG, "response: " + r + "(" + String.valueOf(i) + ")" );
             String d = dates.get(i);
             processRequest(r, d, deviceType);
         }
@@ -529,7 +530,7 @@ public class RequestImport extends Activity implements DatePickerFragment.OnDate
             for(int i = 0; i< dataArray.length(); i++){ //iterate through array entries
                 temp = dataArray.getJSONObject(i);
                 //TODO: remove entry numbers and use an entry ID instead
-                createTableEntry(date, i, fieldName, "", temp, deviceType); //enter in table
+                createTableEntry(date, fieldName, "", temp, deviceType); //enter in table
             }
 
             Log.d(TAG, "processRequest: processed field " + fieldName);
@@ -548,13 +549,12 @@ public class RequestImport extends Activity implements DatePickerFragment.OnDate
      * A recursive function that creates the key for each entry in our database and then
      *
      * @param date: the date on which the data was recorded
-     * @param entryNum: an integer indexing this entry in a particular date. This combines with the date field to provide a unique key for a given entry //TODO: remove and replace with IDs
      * @param tableName: which table to alter (i.e. blood_glucose)
      * @param fieldName: the name of the key for this entry (or in other words, its new column header in a SQL table)
      * @param entry: the JSON object from which the data is stored (entry is the DSU, essentially)
      * @param deviceType: The wearable (or 'Test' device) to query data for
      */
-    private void createTableEntry(String date, int entryNum, String tableName, String fieldName, JSONObject entry, String deviceType){
+    private void createTableEntry(String date, String tableName, String fieldName, JSONObject entry, String deviceType){
         Log.d(TAG, "in createTableEntry");
         Iterator<String> fields = entry.keys();
         String currKey;
@@ -568,9 +568,9 @@ public class RequestImport extends Activity implements DatePickerFragment.OnDate
                     key = fieldName + "$" + currKey;
                 }
                 if (entry.get(currKey) instanceof JSONObject) {
-                    createTableEntry(date, entryNum, tableName, key, entry.getJSONObject(currKey), deviceType);
+                    createTableEntry(date, tableName, key, entry.getJSONObject(currKey), deviceType);
                 } else {
-                    insertInTable(date, entryNum, tableName, key, entry.getString(currKey), deviceType);
+                    insertInTable(date, tableName, key, entry.getString(currKey), deviceType);
                 }
             } catch (Throwable t){
                 Log.e(TAG, "Error in createTable while parsing: \"" + entry + "\": " + t.toString());
@@ -583,19 +583,16 @@ public class RequestImport extends Activity implements DatePickerFragment.OnDate
      * Function to update the SQL database with a single value. This function simply tries to make
      * the passed-in value a double,
      * @param date: the date key for the SQL database
-     * @param entryNum: an integer indexing this entry in a particular date. This
-     *                 combines with the date field to provide a unique key for a
-     *                 given entry
      * @param tableName: which table to alter
      * @param fieldName: the SQL database column name
      * @param value: the value of the cell to be altered as a string.
      * @param deviceType: the value of the cell to be altered as a string.
      * @return the row ID that the value was inserted into
      */
-    private long insertInTable(String date, int entryNum, String tableName,
+    private long insertInTable(String date, String tableName,
                              String fieldName, String value, String deviceType) {
 
-        String message = "field name: " + fieldName +"\nvalue: " + value + "\nentryNum: " + entryNum;
+        String message = "field name: " + fieldName +"\nvalue: " + value;
         Log.i(TAG, "updateTable: " + message);
 
         boolean valueIsDouble = false;
@@ -623,6 +620,7 @@ public class RequestImport extends Activity implements DatePickerFragment.OnDate
             values.put(fieldName, value);
         }
 
+        Log.d(TAG, "addItem: tableName: (" + tableName + ") fieldName: (" + fieldName + ") values: (" + String.valueOf(values) + ")");
         long newRowId = mDbHelper.addItem(db, tableName, fieldName, values, valueIsDouble);
         db.close();
         return newRowId;

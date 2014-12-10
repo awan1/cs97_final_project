@@ -225,7 +225,6 @@ public class RequestVisualize extends Activity  {
             @Override
             public Object parseObject(String source, ParsePosition pos) {
                 return null;
-
             }
         });
         //one mark per day
