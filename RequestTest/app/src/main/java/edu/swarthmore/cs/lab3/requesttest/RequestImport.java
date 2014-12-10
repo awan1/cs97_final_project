@@ -450,7 +450,6 @@ public class RequestImport extends Activity {
 
         ContentValues values = new ContentValues();
         values.put(DSUDbContract.TableEntry.DATE_COLUMN_NAME, date);
-        values.put(DSUDbContract.TableEntry.ENTRYNUM_COLUMN_NAME, entryNum);
         values.put(DSUDbContract.TableEntry.DEVICE_COLUMN_NAME, deviceType);
 
         if (valueIsDouble) {
