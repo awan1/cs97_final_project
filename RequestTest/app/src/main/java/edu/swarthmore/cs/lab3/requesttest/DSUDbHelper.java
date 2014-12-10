@@ -21,6 +21,7 @@ public class DSUDbHelper extends SQLiteOpenHelper {
     private static int DATABASE_VERSION = 1;
     public static final String DATABASE_NAME = "DSUData.db";
     private static final String TAG = "DSUDbHelper";
+    private int ENTRY_COUNTER = 0;
 
     public DSUDbHelper(Context context) {
         super(context, DATABASE_NAME, null, DATABASE_VERSION);
@@ -71,6 +72,18 @@ public class DSUDbHelper extends SQLiteOpenHelper {
     }
 
     /**
+     * Getter for the ENTRY_COUNTER variable
+     * @return the value of ENTRY_COUNTER
+     */
+    public int getEntryCounter() {
+        return ENTRY_COUNTER;
+    }
+
+    public void incrementEntry() {
+        ENTRY_COUNTER++;
+    }
+
+    /**
      * Add an item to a database
      * @param db the database to be added to
      * @param tableName the name of the table to add to
@@ -114,14 +127,11 @@ public class DSUDbHelper extends SQLiteOpenHelper {
 
             // Find the row of our table.
             String date_col = DSUDbContract.TableEntry.DATE_COLUMN_NAME;
-            String entrynum_col = DSUDbContract.TableEntry.ENTRYNUM_COLUMN_NAME;
             String device_col = DSUDbContract.TableEntry.DEVICE_COLUMN_NAME;
-            String selection = MessageFormat.format("{0}=? AND {1}=? AND {2}=?",
+            String selection = MessageFormat.format("{0}=? AND {1}=?",
                     date_col,
-                    entrynum_col,
                     device_col);
-            String[] selectionArgs = new String[] {values.getAsString(date_col),
-                    values.getAsString(entrynum_col), values.getAsString(device_col)};
+            String[] selectionArgs = new String[] {values.getAsString(date_col), values.getAsString(device_col)};
 
             //Do an update if the constraints match
             db.update(tableName, values, selection, selectionArgs);
@@ -161,25 +171,23 @@ public class DSUDbHelper extends SQLiteOpenHelper {
 
         if (deviceType.equals(ALL_DEVICES)) { //if the user wants the specific data for all devices, use this query
             command = MessageFormat.format(
-                    "SELECT * FROM {0} WHERE CAST(substr({1},1,4)||substr({1},6,2)||substr({1},9,2) as INTEGER) BETWEEN {2} AND {3} ORDER BY {4} ASC, {5} ASC",
+                    "SELECT * FROM {0} WHERE CAST(substr({1},1,4)||substr({1},6,2)||substr({1},9,2) as INTEGER) BETWEEN {2} AND {3} ORDER BY {4} ASC",
                     tableName, //0
                     DSUDbContract.TableEntry.DATE_COLUMN_NAME, //1
                     dateStart, //2
                     dateEnd, //3
-                    DSUDbContract.TableEntry.DATE_COLUMN_NAME, //4
-                    DSUDbContract.TableEntry.ENTRYNUM_COLUMN_NAME //5
+                    DSUDbContract.TableEntry.DATE_COLUMN_NAME //4
             );
         } else { //if the user wants the specific data for a specific device, use this query
             command = MessageFormat.format(
-                    "SELECT * FROM {0} WHERE {1}=\"{2}\" AND CAST(substr({3},1,4)||substr({3},6,2)||substr({3},9,2) as INTEGER) BETWEEN {4} AND {5} ORDER BY {6} ASC, {7} ASC",
+                    "SELECT * FROM {0} WHERE {1}=\"{2}\" AND CAST(substr({3},1,4)||substr({3},6,2)||substr({3},9,2) as INTEGER) BETWEEN {4} AND {5} ORDER BY {6} ASC",
                     tableName, //0
                     DSUDbContract.TableEntry.DEVICE_COLUMN_NAME, //1
                     deviceType, //2
                     DSUDbContract.TableEntry.DATE_COLUMN_NAME, //3
                     dateStart, //4
                     dateEnd, //5
-                    DSUDbContract.TableEntry.DATE_COLUMN_NAME, //6
-                    DSUDbContract.TableEntry.ENTRYNUM_COLUMN_NAME //7
+                    DSUDbContract.TableEntry.DATE_COLUMN_NAME //6
             );
         }
 
@@ -219,12 +227,12 @@ public class DSUDbHelper extends SQLiteOpenHelper {
      */
     private void createTableIfNotExisting(SQLiteDatabase db, String tableName) {
         String command = MessageFormat.format(
-                "CREATE TABLE IF NOT EXISTS {0} ({1} {2}, {3} {4}, {5} {6}, PRIMARY KEY ({1}, {3}, {5}))",
+                "CREATE TABLE IF NOT EXISTS {0} ({1} {2} PRIMARY KEY, {3} {4}, {5} {6})",
                 tableName,
+                DSUDbContract.TableEntry._ID,
+                DSUDbContract.TableEntry.ID_COLUMN_TYPE,
                 DSUDbContract.TableEntry.DATE_COLUMN_NAME,
                 DSUDbContract.TableEntry.DATE_COLUMN_TYPE,
-                DSUDbContract.TableEntry.ENTRYNUM_COLUMN_NAME,
-                DSUDbContract.TableEntry.ENTRYNUM_COLUMN_TYPE,
                 DSUDbContract.TableEntry.DEVICE_COLUMN_NAME,
                 DSUDbContract.TableEntry.DEVICE_COLUMN_TYPE
         );

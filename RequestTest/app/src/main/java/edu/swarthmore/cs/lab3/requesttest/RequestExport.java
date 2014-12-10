@@ -176,8 +176,8 @@ public class RequestExport extends Activity {
                         value_string = c.getString(c.getColumnIndex(name));
                     }
 
-                    //if we reach a new entry number (soon to be entry ID) enter the last JSONObject in the Array and create a new JSONObject for the next entry
-                    if (name.equals(DSUDbContract.TableEntry.ENTRYNUM_COLUMN_NAME)) {
+                    //if we reach a new entry ID enter the last JSONObject in the Array and create a new JSONObject for the next entry
+                    if (name.equals(DSUDbContract.TableEntry._ID)) {
 
                         //enter the last JSONObject in the Array
                         if (curJSONObject != null) {
