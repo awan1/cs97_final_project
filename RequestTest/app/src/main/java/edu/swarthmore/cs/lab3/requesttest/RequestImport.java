@@ -39,6 +39,7 @@ import java.util.Arrays;
 import java.util.Calendar;
 
 import java.util.Date;
+import java.util.Dictionary;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Random;
@@ -73,8 +74,8 @@ public class RequestImport extends Activity implements DatePickerFragment.OnDate
     private int mEndDay;
     private int mEndYear;
 
-    private long mTime;
-    private int mDSUcount;
+    private Long[] mTimeList;
+    private int mDSUCount;
 
     private static final String TAG = "RequestImport";
 
@@ -99,6 +100,9 @@ public class RequestImport extends Activity implements DatePickerFragment.OnDate
         addEndListenerOnButton();
 
         makeRequestButton();
+
+        mTimeList = new Long[101];
+        Arrays.fill(mTimeList, 0L);
 
         //Set up text view for request responses and make scrollable
         mRequestResponse = (TextView) findViewById(R.id.response_text);
@@ -266,6 +270,40 @@ public class RequestImport extends Activity implements DatePickerFragment.OnDate
         );
     }
 
+    public ArrayList<String> timeTestGetDates(String dateStart, int datesAdded){
+
+
+        ArrayList<String> dates = new ArrayList<String>(); //list of dates as strings
+
+        Calendar c = Calendar.getInstance();
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd"); //date form
+        try {
+            c.setTime(sdf.parse(dateStart));
+        } catch (ParseException e) {
+            //do nothing
+        }
+        c.add(Calendar.DATE, datesAdded);
+        String dateEnd = sdf.format(c.getTime());
+
+        String date = dateStart;
+        while (true) {
+            if (date.equals(dateEnd)){ //break at last date
+                break;
+            }
+            sdf = new SimpleDateFormat("yyyy-MM-dd"); //date format
+            c = Calendar.getInstance();
+            try {
+                c.setTime(sdf.parse(date));
+            } catch (ParseException e) {
+                break;
+            }
+            c.add(Calendar.DATE, 1);
+            date = sdf.format(c.getTime());  // date is now the new date in our specified date format
+            dates.add(date); //add date string to our list of dates
+        }
+        return dates;
+    }
+
     /**
      *
      * @param deviceType: The wearable to query data for (or 'Test')
@@ -275,10 +313,28 @@ public class RequestImport extends Activity implements DatePickerFragment.OnDate
      */
     private boolean makeRequestByDate(String deviceType, String dateStart, String dateEnd, String measure) {
         String response = "";
+
+        //dateStart = "2014-01-01";
+        //measure = "step_count";
+
+        /*
+        for (int k = 1; k < 4; k++) {
+            for (int j = 0; j < mTimeList.length; j++) {
+                // Initialize the singleton DB helper
+                Context myContext = RequestImport.this;
+                mDbHelper = new DSUDbHelper(myContext);
+
+                mDSUCount = j;
+                Log.d(TAG, "iteration: " + String.valueOf(j));
+                ArrayList<String> dates = timeTestGetDates(dateStart, j);
+        */
+
+
         ArrayList<String> dates = getDates(dateStart, dateEnd); //array consisting of dates starting with dateStart and ending in dateEnd (inclusive)
         if (dates.size() == 0) {
             return false;
         }
+
         ArrayList<String> responses = new ArrayList<String>(); //responses corresponding to the dates in the dates array
         for (int i = 0; i < dates.size(); i++) { //make a separate request for each date
             String date = dates.get(i);
@@ -287,10 +343,10 @@ public class RequestImport extends Activity implements DatePickerFragment.OnDate
             } else { //otherwise access our response from the username above
                 RequestClient client = new RequestClient();
 
-                //use the method below to handle threading issues
-                if( Build.VERSION.SDK_INT >= Build.VERSION_CODES.HONEYCOMB ) {
+                        //use the method below to handle threading issues
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.HONEYCOMB) {
                     try {
-                        response = client.executeOnExecutor(client.THREAD_POOL_EXECUTOR, "http://130.58.68.129:8083/data/"+deviceType.toLowerCase()+"/blood_glucose?username=superdock&dateStart=" + date + "&dateEnd=" + date + "&normalize=true").get();
+                        response = client.executeOnExecutor(client.THREAD_POOL_EXECUTOR, "http://130.58.68.129:8083/data/" + deviceType.toLowerCase() + "/blood_glucose?username=superdock&dateStart=" + date + "&dateEnd=" + date + "&normalize=true").get();
                         //response = mRequestClient.executeOnExecutor(mRequestClient.THREAD_POOL_EXECUTOR, "http://130.58.68.129:8083/data/fitbit/blood_glucose?username=superdock&dateStart=" + date + "&dateEnd=" + date + "&normalize=true").get();
                     } catch (InterruptedException e) {
                         response = "Interrupted Exception caught.";
@@ -299,7 +355,7 @@ public class RequestImport extends Activity implements DatePickerFragment.OnDate
                     }
                 } else {
                     try {
-                        response = client.execute("http://130.58.68.129:8083/data/"+deviceType.toLowerCase()+"/blood_glucose?username=superdock&dateStart=" + date + "&dateEnd=" + date + "&normalize=true").get();
+                        response = client.execute("http://130.58.68.129:8083/data/" + deviceType.toLowerCase() + "/blood_glucose?username=superdock&dateStart=" + date + "&dateEnd=" + date + "&normalize=true").get();
                         //response = mRequestClient.execute("http://130.58.68.129:8083/data/fitbit/blood_glucose?username=superdock&dateStart=" + date + "&dateEnd=" + date + "&normalize=true").get();
                     } catch (InterruptedException e) {
                         response = "Interrupted Exception caught.";
@@ -311,13 +367,25 @@ public class RequestImport extends Activity implements DatePickerFragment.OnDate
             responses.add(response); //add response for a single day to our response array
         }
 
-        //process request for each date in our date range
+
+                //process request for each date in our date range
         for (int i = 0; i < responses.size(); i++) {
-            String r = responses.get(i);
-            Log.d(TAG, "response: " + r + "(" + String.valueOf(i) + ")" );
-            String d = dates.get(i);
-            processRequest(r, d, deviceType);
+             String r = responses.get(i);
+             //Log.d(TAG, "response: " + r + "(" + String.valueOf(i) + ")");
+             String d = dates.get(i);
+             processRequest(r, d, deviceType);
         }
+        /*
+                String dbName = mDbHelper.getDatabaseName();
+                mDbHelper.close();
+                this.deleteDatabase(dbName);
+            }
+            for (int i = 0; i < mTimeList.length; i++) {
+                String msg = "Entries per DSU =" + String.valueOf(k) + "DSUs = " + String.valueOf(i) + " Time (in milliseconds) = " + String.valueOf(mTimeList[i]);
+                Log.d(TAG, msg);
+            }
+        }
+        */
         return true;
     }
 
@@ -441,9 +509,11 @@ public class RequestImport extends Activity implements DatePickerFragment.OnDate
                     "}} ";
         } else if (measure.equals("step_count")) { //various number of entries (varying based on date between 1 and 2) included to prove that we can handle various numbers of entries per day
             int count = (Character.getNumericValue(date.charAt(date.length()-1))%2)+1;
+            //count = copies;
             int val = 6000;
             String entries = "";
-            for (int i = 0; i < count; i++) {
+            //for (int i = 0; i < count; i++) {
+            for (int i = 0; i < count; i++){
                 String entry = " { " +
                         " 'step_count': " + Integer.toString(val * (i+1)) + "," +
                         " 'effective_time_frame': {" +
@@ -457,7 +527,7 @@ public class RequestImport extends Activity implements DatePickerFragment.OnDate
                     entries += (entry +",");
                 }
             }
-            Log.d(TAG, "entries: " + entries);
+            //Log.d(TAG, "entries: " + entries);
             response = " {'shim': null," +
                     " 'timeStamp': 1416423277," +
                     " 'body': {" +
@@ -490,7 +560,7 @@ public class RequestImport extends Activity implements DatePickerFragment.OnDate
         } else if (measure.equals("non_health_data")) {
             response = " ";
         }
-        Log.d(TAG, "getTestResponse: " + response);
+        //Log.d(TAG, "getTestResponse: " + response);
         return response;
     }
 
@@ -521,34 +591,45 @@ public class RequestImport extends Activity implements DatePickerFragment.OnDate
      * @param date the date on which the data was recorded
      */
     private void processRequest(String response, String date, String deviceType){
-        Log.d(TAG, "in processRequest");
+        //Log.d(TAG, "in processRequest");
         JSONObject temp;
         String MAIN_KEY = "body";  // The main key in the JSON response
         try {
-            Log.i(TAG, response);
+            //Log.i(TAG, response);
             JSONObject obj = new JSONObject(response);
             JSONObject body = obj.getJSONObject(MAIN_KEY);
             Iterator<String> field_name_iterator = body.keys();
             String fieldName = field_name_iterator.next();
-            Log.d(TAG, "Field_name: " + fieldName); //extract field name as string from inside "body"
+            //Log.d(TAG, "Field_name: " + fieldName); //extract field name as string from inside "body"
             JSONArray dataArray = body.getJSONArray(fieldName); //get JSON array from "body"
             for(int i = 0; i< dataArray.length(); i++){ //iterate through array entries
-                Log.d(TAG, "dataArrayLength: " + dataArray.length());
+                //Log.d(TAG, "dataArrayLength: " + dataArray.length());
                 temp = dataArray.getJSONObject(i);
                 List<Pair<String, String>> entryValuePairList = new ArrayList<Pair<String, String>>();
                 entryValuePairList = createTableEntry(date, fieldName, "", temp, deviceType, entryValuePairList); //enter in table
+
+
+                //long timeStart = System.currentTimeMillis(); //time checking
                 insertInTable2(date, fieldName, entryValuePairList, deviceType);
+                //long timeEnd = System.currentTimeMillis(); //time checking
+                //Log.d(TAG, "timeStart" + timeStart);
+                //Log.d(TAG, "timeEnd" + timeEnd);
+                //long diff = timeEnd-timeStart; //time checking
+                //Log.d(TAG, "timediff" + diff);
+                //Log.d(TAG, "converted Time Diff" + (Long)diff);
+                //mTimeList[mDSUCount] += diff; //time checking
+
                 //for (int j = 0; j < entryValuePairList.size(); j++) {
                 //    Log.d(TAG, "NEW ENTRY");
                 //    Log.d(TAG, "createTableEntry: " + entryValuePairList.get(j).first + " value: " + entryValuePairList.get(j).second);
                 //}
             }
 
-            Log.d(TAG, "processRequest: processed field " + fieldName);
+            //Log.d(TAG, "processRequest: processed field " + fieldName);
 
 
             // Get the database
-            SQLiteDatabase db = mDbHelper.getReadableDatabase();
+            //SQLiteDatabase db = mDbHelper.getReadableDatabase();
 
         } catch (Throwable t) {
             Log.e(TAG, "Error in processRequest while parsing: \"" + response + "\": " + t.toString());
@@ -582,12 +663,12 @@ public class RequestImport extends Activity implements DatePickerFragment.OnDate
                     key = fieldName + "$" + currKey;
                 }
                 if (entry.get(currKey) instanceof JSONObject) {
-                    Log.d(TAG, "IN HERE: key: " + key);
+                    //Log.d(TAG, "IN HERE: key: " + key);
                     entryValueList = createTableEntry(date, tableName, key, entry.getJSONObject(currKey), deviceType, entryValueList);
                 } else {
                     Pair<String, String> resultPair = new Pair<String, String>(key, entry.getString(currKey));
-                    Log.d(TAG, "key: " + key);
-                    Log.d(TAG, "value: " + entry.getString(currKey));
+                    //Log.d(TAG, "key: " + key);
+                    //Log.d(TAG, "value: " + entry.getString(currKey));
                     entryValueList.add(resultPair);
                     if (!fields.hasNext()){
                         return entryValueList;
@@ -611,7 +692,7 @@ public class RequestImport extends Activity implements DatePickerFragment.OnDate
     private long insertInTable2(String date, String tableName,
                                List<Pair<String, String>> entryValuePairList, String deviceType) {
 
-        Log.d(TAG, "in insertInTable2");
+        //Log.d(TAG, "in insertInTable2");
 
         ContentValues values = new ContentValues();
         values.put(DSUDbContract.TableEntry.DATE_COLUMN_NAME, date);

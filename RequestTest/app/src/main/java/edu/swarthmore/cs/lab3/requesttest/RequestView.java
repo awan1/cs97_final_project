@@ -23,8 +23,8 @@ import java.util.ArrayList;
  * Activity to view the stored SQL tables
  */
 public class RequestView extends Activity {
-    private Spinner mDeviceTypeSpinner;
-    private String mDeviceType;
+    //private Spinner mDeviceTypeSpinner;
+    //private String mDeviceType;
     private Spinner mTableSpinner;
     private String mTableName;
     private TextView mTableView;
@@ -60,6 +60,7 @@ public class RequestView extends Activity {
         });
     }
 
+    /*
     private void buildDeviceTypeSpinner() {
         mDeviceTypeSpinner = (Spinner) findViewById(R.id.device_type_spinner);
         // Figure out the names of tables in the database
@@ -108,7 +109,7 @@ public class RequestView extends Activity {
                 Log.d(TAG, msg);
             }
         });
-    }
+    }*/
 
     /**
      * Helper function to build the table spinner. It has to figure out what tables are in the
@@ -146,7 +147,7 @@ public class RequestView extends Activity {
             public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
                 mTableName = parent.getItemAtPosition(position).toString();
                 String msg = mTableName;
-                buildDeviceTypeSpinner();
+                //buildDeviceTypeSpinner();
                 Log.d(TAG, msg);
             }
 

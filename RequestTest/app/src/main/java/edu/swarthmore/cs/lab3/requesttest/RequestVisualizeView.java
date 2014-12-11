@@ -97,7 +97,11 @@ public class RequestVisualizeView extends Activity {
         // Set labels
         mPlot.setTitle(mVisualizationName + " plot for " + mTableName);
         mDomain = "Date";
-        mRange = mTableName.replace("_"," ");
+        if (mMeasureName.equals("blood_glucose$value")){
+            mRange = mTableName.replace("_"," ") + " (mg/dL)";
+        } else {
+            mRange = mTableName.replace("_"," ");
+        }
         Log.d(TAG, "range =" + mRange);
 
         // Create a couple arrays of y-values to mPlot:
@@ -185,7 +189,6 @@ public class RequestVisualizeView extends Activity {
         mPlot.setTicksPerDomainLabel(1);
         */
 
-        values.get(0);
         Pair<Float,Float> minMaxValPair = getMinMax(values);
         Pair<Float,Float> minMaxRangePair = findMinMaxForRange(minMaxValPair.first, minMaxValPair.second);
         // uncomment this line to freeze the range boundaries:
@@ -295,8 +298,8 @@ public class RequestVisualizeView extends Activity {
 
         Calendar calendar = Calendar.getInstance();
         SQLiteDatabase db = mDbHelper.getWritableDatabase();
-        //Cursor c = mDbHelper.selectSpecificItems(db, mTableName, mDeviceType, mStartDate, mEndDate, mAnalysisName, mMeasureName);
-        Cursor c = mDbHelper.selectSpecificItems(db, "blood_glucose", "Test", mStartDate, mEndDate, "AVG", "blood_glucose$value");
+        Cursor c = mDbHelper.selectSpecificItems(db, mTableName, mDeviceType, mStartDate, mEndDate, mAnalysisName, mMeasureName);
+        //Cursor c = mDbHelper.selectSpecificItems(db, "blood_glucose", "Test", mStartDate, mEndDate, "AVG", "blood_glucose$value");
         if (c.moveToFirst() ){
             String[] columnNames = c.getColumnNames();
             do {

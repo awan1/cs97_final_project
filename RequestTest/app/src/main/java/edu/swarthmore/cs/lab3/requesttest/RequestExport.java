@@ -67,6 +67,9 @@ public class RequestExport extends Activity implements DatePickerFragment.OnDate
     private int mEndDay;
     private int mEndYear;
 
+    private Long[] mTimeList;
+    private int mDSUCount;
+
     private static final String TAG = "RequestExport";
 
     @Override
@@ -81,6 +84,9 @@ public class RequestExport extends Activity implements DatePickerFragment.OnDate
         mDbHelper = new DSUDbHelper(myContext);
 
         makeMeasureTypeSpinner();
+
+        mTimeList = new Long[101];
+        Arrays.fill(mTimeList, 0L);
 
         setStartDateOnView();
         setEndDateOnView();
@@ -100,7 +106,26 @@ public class RequestExport extends Activity implements DatePickerFragment.OnDate
             public void onClick(View v) {
                 String startDateString = dateToString(mStartYear, mStartMonth, mStartDay);
                 String endDateString = dateToString(mEndYear, mEndMonth, mEndDay);
+
+                /*
+                for (int k = 1; k < 4; k++) {
+                    for (int j = 0; j < mTimeList.length; j++) {
+                        // Initialize the singleton DB helper
+                        Context myContext = RequestImport.this;
+                        mDbHelper = new DSUDbHelper(myContext);
+
+                        mDSUCount = j;
+                        Log.d(TAG, "iteration: " + String.valueOf(j));
+                        ArrayList<String> dates = timeTestGetDates(startDateString, j);
+                */
+
+
+
                 JSONObject DSU = exportDB(startDateString, endDateString);
+
+
+
+
                 String DSUstring = responseToJSONString(DSU.toString()); //converts DSU to string
                 Log.i(TAG, "DSU String: " + DSUstring);
                 mRequestResponse.setText(DSUstring);
@@ -109,6 +134,19 @@ public class RequestExport extends Activity implements DatePickerFragment.OnDate
             }
         });
     }
+
+    /*
+    public String getEndDateString(String startDateString, int j){
+        Calendar c = Calendar.getInstance();
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd"); //date form
+        try {
+            c.setTime(sdf.parse(dateStart));
+        } catch (ParseException e) {
+            //do nothing
+        }
+        c.add(Calendar.DATE, datesAdded);
+        String dateEnd = sdf.format(c.getTime());
+    }*/
 
     public String dateToString(int year, int month, int day){
         return String.format("%d-%02d-%02d", year, month+1, day);

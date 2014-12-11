@@ -99,7 +99,7 @@ public class DSUDbHelper extends SQLiteOpenHelper {
     public long addItem2(SQLiteDatabase db, String tableName,  List<Pair<String, String>> entryValuePairList, ContentValues values,
                         boolean[] entryIsDouble) {
 
-        Log.d(TAG, "addItem called");
+        //Log.d(TAG, "addItem called");
 
         // Create the table if it doesn't exist
         createTableIfNotExisting(db, tableName);
@@ -126,7 +126,7 @@ public class DSUDbHelper extends SQLiteOpenHelper {
 
                 String command = MessageFormat.format("ALTER TABLE {0} ADD COLUMN {1} {2}",
                         tableName, fieldName, value_type);
-                Log.d(TAG, "addItem: command " + command);
+                //Log.d(TAG, "addItem: command " + command);
                 db.execSQL(command);
             }
 
@@ -154,8 +154,8 @@ public class DSUDbHelper extends SQLiteOpenHelper {
     public long addItem(SQLiteDatabase db, String tableName, String fieldName, ContentValues values,
                         boolean valueIsDouble) {
 
-        Log.d(TAG, "addItem called");
-        Log.d(TAG, "addItem: tableName " + tableName + " fieldName " + fieldName + " values " + values);
+        //Log.d(TAG, "addItem called");
+        //Log.d(TAG, "addItem: tableName " + tableName + " fieldName " + fieldName + " values " + values);
 
         // Create the table if it doesn't exist
         createTableIfNotExisting(db, tableName);
@@ -179,7 +179,7 @@ public class DSUDbHelper extends SQLiteOpenHelper {
 
             String command = MessageFormat.format("ALTER TABLE {0} ADD COLUMN {1} {2}",
                     tableName, fieldName, value_type);
-            Log.d(TAG, "addItem: command "+command);
+            //Log.d(TAG, "addItem: command "+command);
             db.execSQL(command);
         } finally {
             // Add the entry to the table
@@ -193,11 +193,13 @@ public class DSUDbHelper extends SQLiteOpenHelper {
             String selection = MessageFormat.format("{0}=? AND {1}=?",
                     date_col,
                     device_col);
-            Log.d(TAG, "in addItem, selection:" + selection);
+            //Log.d(TAG, "in addItem, selection:" + selection);
             String[] selectionArgs = new String[] {values.getAsString(date_col), values.getAsString(device_col)};
+            /*
             for (int i = 0; i < selectionArgs.length; i++) {
                 Log.d(TAG, "selectionArgs" + selectionArgs[i]);
             }
+            */
             //Do an update if the constraints match
             //db.update(tableName, values, selection, selectionArgs);
 
@@ -368,7 +370,7 @@ public class DSUDbHelper extends SQLiteOpenHelper {
                 DSUDbContract.TableEntry.DEVICE_COLUMN_NAME,
                 DSUDbContract.TableEntry.DEVICE_COLUMN_TYPE
         );
-        Log.d(TAG, "createTableIfNotExisting: command "+command);
+        //Log.d(TAG, "createTableIfNotExisting: command "+command);
         db.execSQL(command);
     }
 
