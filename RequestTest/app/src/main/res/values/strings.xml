@@ -9,6 +9,8 @@
     <string name="device_type_header">Device Type</string>
     <string name="measure_type_header">Measurement Type</string>
     <string name="username_header">Username</string>
+    <string name="measure_header">Measurement</string>
+    <string name="analysis_header">Analysis</string>
 
     <string-array name="device_array">
         <item>Test</item>

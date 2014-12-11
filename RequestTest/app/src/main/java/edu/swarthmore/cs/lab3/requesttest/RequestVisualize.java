@@ -1,6 +1,7 @@
 package edu.swarthmore.cs.lab3.requesttest;
 
 import android.app.Activity;
+import android.app.DialogFragment;
 import android.content.Context;
 import android.content.Intent;
 import android.database.Cursor;
@@ -51,6 +52,20 @@ public class RequestVisualize extends Activity  {
     private static final String TAG = "RequestVisualize";
     private String mRange;
     private String mDomain;
+    private Spinner mDeviceTypeSpinner;
+    private String mDeviceType;
+    private Spinner mMeasureSpinner;
+    private String mMeasureName;
+    private Spinner mAnalysisSpinner;
+    private String mAnalysisName;
+
+    private int mStartMonth; //months are 0-based
+    private int mStartDay;
+    private int mStartYear;
+
+    private int mEndMonth; //months are 0-based
+    private int mEndDay;
+    private int mEndYear;
 
 
     @Override
@@ -65,7 +80,7 @@ public class RequestVisualize extends Activity  {
 
         // Find components
         mVisualizeButton = (Button) findViewById(R.id.make_visualization_button);
-        mPlot = (XYPlot) findViewById(R.id.visualization_plot);
+        //mPlot = (XYPlot) findViewById(R.id.visualization_plot);
 
         buildTableSpinner();
         buildVisualizationSpinner();
@@ -80,12 +95,263 @@ public class RequestVisualize extends Activity  {
                     String text = "Please select a visualization type.";
                     Toast.makeText(getApplicationContext(), text, Toast.LENGTH_SHORT).show();
                 } else {
+                    Intent intent = new Intent(RequestVisualize.this, RequestVisualizeView.class);
+                    startActivityForResult(intent, 0);
                     Log.d(TAG, "plot should be generated");
-                    doPlot();
+                    //doPlot();
                 }
             }
         });
     }
+
+    public void makeDeviceTypeSpinner(){
+        mDeviceTypeSpinner = (Spinner) findViewById(R.id.device_type_spinner);
+        // Figure out the names of tables in the database
+        final ArrayList<String> tableArray = new ArrayList<String>();
+
+        SQLiteDatabase db = mDbHelper.getWritableDatabase();
+        String command = MessageFormat.format(
+                "SELECT DISTINCT {0} FROM {1}",
+                DSUDbContract.TableEntry.DEVICE_COLUMN_NAME,
+                mTableName
+        );
+
+        tableArray.add("All Devices");
+        Cursor c = db.rawQuery(command, null);
+        if (c.moveToFirst() ){
+            String[] columnNames = c.getColumnNames();
+            //Log.d(TAG, "columnNames: " + columnNames.toString());
+            do {
+                for (String name: columnNames) {
+                    tableArray.add(c.getString(c.getColumnIndex(name)));
+                }
+            } while (c.moveToNext());
+        }
+        c.close();
+
+        // Create an ArrayAdapter using the string array and a default spinner layout
+        ArrayAdapter<String> adapter = new ArrayAdapter<String>(this,
+                android.R.layout.simple_spinner_item, tableArray);
+        // Specify the layout to use when the list of choices appears
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        // Apply the adapter to the spinner
+        mDeviceTypeSpinner.setAdapter(adapter);
+
+        mDeviceTypeSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                mDeviceType = parent.getItemAtPosition(position).toString();
+                String msg = mDeviceType;
+                Log.d(TAG, msg);
+            }
+
+            @Override
+            public void onNothingSelected(AdapterView<?> parent) {
+                mDeviceType = null;
+                String msg = mDeviceType;
+                Log.d(TAG, msg);
+            }
+        });
+    }
+
+    public void onDateSetChangeDate(int year, int month, int day, boolean start){
+        if (start) {
+            mStartDay = day;
+            mStartMonth = month;
+            mStartYear = year;
+        } else {
+            mEndDay = day;
+            mEndMonth = month;
+            mEndYear = year;
+        }
+    }
+
+    public void setStartDateOnView() {
+        mStartDateButton = (Button) findViewById(R.id.select_start_date_button);
+
+        mStartMonth = 0; //months are 0-based
+        mStartDay = 1;
+        mStartYear = 2014;
+
+        // set current date into textview
+        mStartDateButton.setText(new StringBuilder()
+                // Month is 0 based, just add 1
+                .append(mStartMonth+1).append("-").append(mStartDay).append("-")
+                .append(mStartYear).append(" "));
+    }
+
+    public void setEndDateOnView() {
+        mEndDateButton = (Button) findViewById(R.id.select_end_date_button);
+
+        mEndMonth = 0; //months are 0-based
+        mEndDay = 1;
+        mEndYear = 2014;
+
+        // set current date into textview
+        mEndDateButton.setText(new StringBuilder()
+                // Month is 0 based, just add 1
+                .append(mEndMonth+1).append("-").append(mEndDay).append("-")
+                .append(mEndYear).append(" "));
+    }
+
+    public void addStartListenerOnButton() {
+        //Log.d(TAG, "addListenerOnButton: "+String.valueOf(mStartYear)+String.valueOf(mStartMonth)+String.valueOf(mStartDay));
+        mStartDateButton.setOnClickListener(new View.OnClickListener() {
+                                                @Override
+                                                public void onClick(View v) {
+                                                    Bundle args = new Bundle();
+                                                    args.putInt("day", mStartDay);
+                                                    args.putInt("month", mStartMonth);
+                                                    args.putInt("year", mStartYear);
+                                                    args.putBoolean("start", true);
+                                                    DialogFragment picker = new DatePickerFragment();
+                                                    picker.setArguments(args);
+                                                    picker.show(getFragmentManager(), "datePicker");
+                                                }
+                                            }
+
+        );
+    }
+
+    public void addEndListenerOnButton() {
+        //Log.d(TAG, "addListenerOnButton: "+String.valueOf(mStartYear)+String.valueOf(mStartMonth)+String.valueOf(mStartDay));
+        mEndDateButton.setOnClickListener(new View.OnClickListener() {
+                                              @Override
+                                              public void onClick(View v) {
+                                                  Bundle args = new Bundle();
+                                                  args.putInt("day", mEndDay);
+                                                  args.putInt("month", mEndMonth);
+                                                  args.putInt("year", mEndYear);
+                                                  args.putBoolean("start", false);
+                                                  DialogFragment picker = new DatePickerFragment();
+                                                  picker.setArguments(args);
+                                                  picker.show(getFragmentManager(), "datePicker");
+                                              }
+                                          }
+
+        );
+    }
+
+
+    private String convertMeasurementString(String measurementString){
+        String newString = "";
+        newString = measurementString.replace("_", " ");
+        newString = newString.replace("$", ": ");
+        return newString;
+    }
+
+    /**
+     * Helper function to build the table spinner. It has to figure out what tables are in the
+     * database and allow users to select them.
+     * TODO: this makes me sad but this is an exact copy from RequestView. I couldn't figure out how
+     *  to refactor this code since it sets lots of local variables...
+     */
+    private void buildMeasureTypeSpinner() {
+        mMeasureSpinner = (Spinner) findViewById(R.id.measure_spinner);
+        // Figure out the names of tables in the database
+        final ArrayList<String> tableArray = new ArrayList<String>();
+        String tableName;
+
+        SQLiteDatabase db = mDbHelper.getWritableDatabase();
+        String command = "PRAGMA table_info(" + mTableName + ")";
+        Cursor c = db.rawQuery(command, null);
+        if (c.moveToFirst()){
+            while (!c.isAfterLast()){
+                tableName = c.getString(c.getColumnIndex("name"));
+                if (tableName.equals(tableName.toLowerCase()) && !tableName.equals(DSUDbContract.TableEntry._ID)) {
+                    //String revisedTableName = convertMeasurementString(tableName);
+                    //tableArray.add(revisedTableName);
+                    tableArray.add(tableName);
+                }
+                c.moveToNext();
+            }
+        }
+        c.close();
+
+        for (int i = 0; i < tableArray.size(); i++){
+            Log.d(TAG, "BUILDING MEASURE SPINNER: " + tableArray.get(i));
+        }
+
+        // Create an ArrayAdapter using the string array and a default spinner layout
+        ArrayAdapter<String> adapter = new ArrayAdapter<String>(this,
+                android.R.layout.simple_spinner_item, tableArray);
+        // Specify the layout to use when the list of choices appears
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        // Apply the adapter to the spinner
+        mMeasureSpinner.setAdapter(adapter);
+
+        mMeasureSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                mMeasureName = parent.getItemAtPosition(position).toString();
+                String msg = mMeasureName;
+                buildAnalysisSpinner();
+                Log.d(TAG, msg);
+            }
+
+            @Override
+            public void onNothingSelected(AdapterView<?> parent) {
+                mMeasureName = null;
+                String msg = mMeasureName;
+                Log.d(TAG, msg);
+            }
+        });
+    }
+
+    private void buildAnalysisSpinner() {
+        mAnalysisSpinner = (Spinner) findViewById(R.id.analysis_spinner);
+        // Figure out the names of tables in the database
+        final ArrayList<String> tableArray = new ArrayList<String>();
+        String tableName;
+        String measureType = "";
+
+        SQLiteDatabase db = mDbHelper.getWritableDatabase();
+        String command = "PRAGMA table_info(" + mTableName + ")";
+        Cursor c = db.rawQuery(command, null);
+
+        if (c.moveToFirst()){
+            while (!c.isAfterLast()){
+                tableName = c.getString(c.getColumnIndex("name"));
+                if (tableName.equals(mMeasureName)) {
+                    measureType = c.getString(c.getColumnIndex("type"));
+                    break;
+                }
+                c.moveToNext();
+            }
+        }
+        c.close();
+
+        if (measureType.equals("DOUBLE")){
+            tableArray.addAll(Arrays.asList("AVG","TOTAL","MIN","MAX","COUNT"));
+        } else {
+            tableArray.add("COUNT");
+        }
+
+        // Create an ArrayAdapter using the string array and a default spinner layout
+        ArrayAdapter<String> adapter = new ArrayAdapter<String>(this,
+                android.R.layout.simple_spinner_item, tableArray);
+        // Specify the layout to use when the list of choices appears
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        // Apply the adapter to the spinner
+        mAnalysisSpinner.setAdapter(adapter);
+
+        mAnalysisSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                mAnalysisName = parent.getItemAtPosition(position).toString();
+                String msg = mAnalysisName;
+                Log.d(TAG, msg);
+            }
+
+            @Override
+            public void onNothingSelected(AdapterView<?> parent) {
+                mAnalysisName = null;
+                String msg = mAnalysisName;
+                Log.d(TAG, msg);
+            }
+        });
+    }
+
     /**
      * Helper function to build the table spinner. It has to figure out what tables are in the
      * database and allow users to select them.
@@ -124,6 +390,8 @@ public class RequestVisualize extends Activity  {
             public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
                 mTableName = parent.getItemAtPosition(position).toString();
                 String msg = mTableName;
+                makeDeviceTypeSpinner();
+                buildMeasureTypeSpinner();
                 Log.d(TAG, msg);
             }
 
