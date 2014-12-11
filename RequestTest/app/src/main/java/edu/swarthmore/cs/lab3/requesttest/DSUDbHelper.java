@@ -6,11 +6,14 @@ import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteException;
 import android.database.sqlite.SQLiteOpenHelper;
+import android.os.Message;
 import android.util.Log;
+import android.util.Pair;
 
 import junit.framework.Test;
 
 import java.text.MessageFormat;
+import java.util.List;
 
 /**
  * Created by awan1 on 11/17/14.
@@ -87,6 +90,61 @@ public class DSUDbHelper extends SQLiteOpenHelper {
      * Add an item to a database
      * @param db the database to be added to
      * @param tableName the name of the table to add to
+     * @param entryValuePairList a list of key value pairs that we want to add
+     * @param values the value to be added
+     * @param entryIsDouble whether the value in the passed-in values is a double or not (if not,
+     *                      assume it is text)
+     * @return the id of the row that values was inserted into.
+     */
+    public long addItem2(SQLiteDatabase db, String tableName,  List<Pair<String, String>> entryValuePairList, ContentValues values,
+                        boolean[] entryIsDouble) {
+
+        Log.d(TAG, "addItem called");
+
+        // Create the table if it doesn't exist
+        createTableIfNotExisting(db, tableName);
+
+        // Add the column if it doesn't exist, and add the entry to the table.
+        for (int i = 0; i < entryValuePairList.size(); i++) {
+            String fieldName = entryValuePairList.get(i).first;
+            boolean isDouble = entryIsDouble[i];
+            Cursor c = null;
+            try {
+                // Try to select the given column. This throws an error if the field doesn't exist.
+                String command = MessageFormat.format("SELECT {0} FROM {1}",
+                        fieldName, tableName);
+                c = db.rawQuery(command, null);
+            } catch (SQLiteException e) {
+
+                // Add the column to the table
+                String value_type;
+                if (isDouble) {
+                    value_type = "DOUBLE";
+                } else {
+                    value_type = DSUDbContract.TableEntry.DEFAULT_ENTRY_TYPE;
+                }
+
+                String command = MessageFormat.format("ALTER TABLE {0} ADD COLUMN {1} {2}",
+                        tableName, fieldName, value_type);
+                Log.d(TAG, "addItem: command " + command);
+                db.execSQL(command);
+            }
+
+            //close the cursor if we opened it
+            if (c != null) {
+                c.close();
+            }
+        }
+
+        long newRowId = db.insertWithOnConflict(tableName, null, values, SQLiteDatabase.CONFLICT_IGNORE);
+        return newRowId;
+    }
+
+
+    /**
+     * Add an item to a database
+     * @param db the database to be added to
+     * @param tableName the name of the table to add to
      * @param fieldName the name of the column to add to
      * @param values the value to be added
      * @param valueIsDouble whether the value in the passed-in values is a double or not (if not,
@@ -95,7 +153,9 @@ public class DSUDbHelper extends SQLiteOpenHelper {
      */
     public long addItem(SQLiteDatabase db, String tableName, String fieldName, ContentValues values,
                         boolean valueIsDouble) {
+
         Log.d(TAG, "addItem called");
+        Log.d(TAG, "addItem: tableName " + tableName + " fieldName " + fieldName + " values " + values);
 
         // Create the table if it doesn't exist
         createTableIfNotExisting(db, tableName);
@@ -108,6 +168,7 @@ public class DSUDbHelper extends SQLiteOpenHelper {
                     fieldName, tableName);
             c = db.rawQuery(command, null);
         } catch (SQLiteException e) {
+
             // Add the column to the table
             String value_type;
             if (valueIsDouble) {
@@ -115,6 +176,7 @@ public class DSUDbHelper extends SQLiteOpenHelper {
             } else {
                 value_type = DSUDbContract.TableEntry.DEFAULT_ENTRY_TYPE;
             }
+
             String command = MessageFormat.format("ALTER TABLE {0} ADD COLUMN {1} {2}",
                     tableName, fieldName, value_type);
             Log.d(TAG, "addItem: command "+command);
@@ -131,10 +193,13 @@ public class DSUDbHelper extends SQLiteOpenHelper {
             String selection = MessageFormat.format("{0}=? AND {1}=?",
                     date_col,
                     device_col);
+            Log.d(TAG, "in addItem, selection:" + selection);
             String[] selectionArgs = new String[] {values.getAsString(date_col), values.getAsString(device_col)};
-
+            for (int i = 0; i < selectionArgs.length; i++) {
+                Log.d(TAG, "selectionArgs" + selectionArgs[i]);
+            }
             //Do an update if the constraints match
-            db.update(tableName, values, selection, selectionArgs);
+            //db.update(tableName, values, selection, selectionArgs);
 
             //This will return the id of the newly inserted row if no conflict
             //It will also return the offending row without modifying it if in conflict
@@ -147,6 +212,73 @@ public class DSUDbHelper extends SQLiteOpenHelper {
 
             return newRowId;
         }
+    }
+
+    public Cursor selectSpecificItems(SQLiteDatabase db, String tableName, String deviceType, String dateStart, String dateEnd, String modification, String fieldName){
+        Cursor c = null;
+        String ALL_DEVICES = "All Devices";
+        String NO_MODIFICATION = "No Modification";
+
+        //convert dates into integers of the format YYYYMMDD for queries
+        dateStart = dateStart.replace("-","");
+        dateEnd = dateEnd.replace("-","");
+        String command;
+
+        String deviceQuery = "";
+        if (deviceType.equals(ALL_DEVICES)){
+            deviceQuery = MessageFormat.format("{0}=\"{1}\" AND",
+                    DSUDbContract.TableEntry.DEVICE_COLUMN_NAME,
+                    deviceType
+            );
+        }
+
+        String fieldQuery = "";
+        if (deviceType.equals(NO_MODIFICATION)){
+            fieldQuery = MessageFormat.format("{0}", fieldName);
+        } else {
+            fieldQuery = MessageFormat.format("{0}({1})", modification, fieldName);
+        }
+
+        command = MessageFormat.format(
+                    "SELECT {5}, {1} FROM {0} WHERE {6} CAST(substr({1},1,4)||substr({1},6,2)||substr({1},9,2) as INTEGER) BETWEEN {2} AND {3} GROUP BY {1} ORDER BY {1}",
+                    tableName, //0
+                    DSUDbContract.TableEntry.DATE_COLUMN_NAME, //1
+                    dateStart, //2
+                    dateEnd, //3
+                    DSUDbContract.TableEntry.DATE_COLUMN_NAME, //4
+                    fieldQuery, //5
+                    deviceQuery //6
+                    //DSUDbContract.TableEntry._ID //7
+        );
+
+        Log.i(TAG, "command: " + command);
+        try {
+            // Try to select the given column. This throws an error if the field doesn't exist.
+            c = db.rawQuery(command, null);
+        } catch (SQLiteException e) {
+            Log.e(TAG, "Error. Invalid Select Command: " + command);
+        }
+
+        /*
+        //this is used only for error checking purposes, up until ****
+        String tableString = String.format("Table %s:\n", tableName);
+        Cursor allRows  = c;
+        if (allRows.moveToFirst() ){
+            String[] columnNames = allRows.getColumnNames();
+            do {
+                for (String name: columnNames) {
+                    tableString += String.format("%s: %s\n", name,
+                            allRows.getString(allRows.getColumnIndex(name)));
+                }
+                tableString += "\n";
+
+            } while (allRows.moveToNext());
+        }
+
+        Log.i(TAG,"DSU String: " + tableString);
+        //error checking print statement complete
+        */
+        return c;
     }
 
     /**
@@ -251,7 +383,7 @@ public class DSUDbHelper extends SQLiteOpenHelper {
      */
     public String getTableAsString(SQLiteDatabase db, String tableName) {
         Log.d(TAG, "getTableAsString called");
-        String tableString = String.format("Table %s:\n", tableName);
+        String tableString = String.format("Table %s:\n\n", tableName);
         Cursor allRows  = db.rawQuery("SELECT * FROM " + tableName, null);
         if (allRows.moveToFirst() ){
             String[] columnNames = allRows.getColumnNames();
@@ -264,6 +396,8 @@ public class DSUDbHelper extends SQLiteOpenHelper {
 
             } while (allRows.moveToNext());
         }
+
+        Log.d(TAG, "getTableAsString" + tableString);
 
         return tableString;
     }

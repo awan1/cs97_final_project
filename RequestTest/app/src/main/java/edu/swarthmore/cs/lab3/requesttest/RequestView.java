@@ -115,7 +115,7 @@ public class RequestView extends Activity {
      * database and allow users to select them.
      */
     private void buildTableSpinner() {
-        mTableSpinner = (Spinner) findViewById(R.id.table_spinner);
+        mTableSpinner = (Spinner) findViewById(R.id.measure_type_spinner);
         // Figure out the names of tables in the database
         final ArrayList<String> tableArray = new ArrayList<String>();
         String tableName;
@@ -124,7 +124,7 @@ public class RequestView extends Activity {
         Cursor c = db.rawQuery("SELECT name FROM sqlite_master WHERE type='table'", null);
         if (c.moveToFirst()){
             while ( !c.isAfterLast() ){
-                tableName = c.getString( c.getColumnIndex("name"));
+                tableName = c.getString(c.getColumnIndex("name"));
                 if (!tableName.equals("android_metadata")) {
                     tableArray.add(tableName);
                 }

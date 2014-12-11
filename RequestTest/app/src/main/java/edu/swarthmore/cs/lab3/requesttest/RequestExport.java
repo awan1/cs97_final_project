@@ -374,6 +374,7 @@ public class RequestExport extends Activity implements DatePickerFragment.OnDate
             String[] columnNames = c.getColumnNames();
             do {
                 for (String name: columnNames) {
+                    Log.d(TAG, "name:" + name);
 
                     //determine if the value is a string or a double, and cast it to its appropriate type
                     boolean valueIsDouble = false;
@@ -389,6 +390,8 @@ public class RequestExport extends Activity implements DatePickerFragment.OnDate
                     }
 
                     //if we reach a new entry ID enter the last JSONObject in the Array and create a new JSONObject for the next entry
+                    Log.d(TAG, "table entry ID:" + String.valueOf(DSUDbContract.TableEntry._ID));
+
                     if (name.equals(DSUDbContract.TableEntry._ID)) {
 
                         //enter the last JSONObject in the Array
@@ -400,7 +403,6 @@ public class RequestExport extends Activity implements DatePickerFragment.OnDate
 
                     //if it is an automatically generated column (from the original DSU) it should be completely lowercase. Our own columns (i.e. Device, Date) are uppercase. For lowercase entries we create a JSONObject
                     } else if (name.toLowerCase().equals(name)) {
-                        Log.d(TAG,"name: "+name);
 
                         JSONObject itemJSONObject = curJSONObject; //JSONObject for single entry item
 

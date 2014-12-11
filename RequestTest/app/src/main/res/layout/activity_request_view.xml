@@ -25,7 +25,7 @@
             android:textStyle="bold" />
 
         <Spinner
-            android:id="@+id/table_spinner"
+            android:id="@+id/measure_type_spinner"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_gravity="center"
