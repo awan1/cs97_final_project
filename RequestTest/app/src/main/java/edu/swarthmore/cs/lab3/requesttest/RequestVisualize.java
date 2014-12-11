@@ -5,6 +5,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
+import android.graphics.Color;
 import android.os.Bundle;
 import android.util.Log;
 import android.util.Pair;
@@ -66,6 +67,7 @@ public class RequestVisualize extends Activity  {
         // Find components
         mVisualizeButton = (Button) findViewById(R.id.make_visualization_button);
         mPlot = (XYPlot) findViewById(R.id.visualization_plot);
+        mPlot.getGraphWidget().getGridBackgroundPaint().setColor(Color.WHITE);
 
         buildTableSpinner();
         buildVisualizationSpinner();
@@ -174,8 +176,8 @@ public class RequestVisualize extends Activity  {
         mRange = mTableName+ " (";
 
         // Create a couple arrays of y-values to mPlot:
-        Pair<ArrayList<Number>, ArrayList<Number>> valuePair = getValues();
-        ArrayList<Number> values = valuePair.first;
+        Pair<ArrayList<Float>, ArrayList<Number>> valuePair = getValues();
+        ArrayList<Float> values = valuePair.first;
         ArrayList<Number> dates = valuePair.second;
         Log.i(TAG, "values array: "+values.toString() );
         Log.i(TAG, "dates array: " + dates.toString());
@@ -186,31 +188,34 @@ public class RequestVisualize extends Activity  {
         // Turn the above arrays into XYSeries':
         XYSeries series1 = new SimpleXYSeries(
                  dates,
-                //Arrays.asList(series1Numbers),          // SimpleXYSeries takes a List so turn our array into a List
-                values, // Y_VALS_ONLY means use the element index as the x value
-                "Series1");                             // Set the display title of the series
+                values,
+                mTableName);
 
 
         // Create a formatter to use for drawing a series using LineAndPointRenderer
         // and configure it from xml:
-        LineAndPointFormatter series1Format = new LineAndPointFormatter();
-        series1Format.setPointLabelFormatter(new PointLabelFormatter());
-        series1Format.configure(getApplicationContext(),
-                R.xml.line_point_formatter_with_plf1);
+        LineAndPointFormatter series1Format = new LineAndPointFormatter(Color.GREEN, Color.GREEN, null, null);
+        //LineAndPointFormatter series1Format = new LineAndPointFormatter();
+        //series1Format.setPointLabelFormatter(new PointLabelFormatter());
+        //series1Format.configure(getApplicationContext(),
+                //R.xml.line_point_formatter_with_plf1);
 
         // add a new series' to the xyplot:
         mPlot.addSeries(series1, series1Format);
 
         // reduce the number of range labels
-        mPlot.setTicksPerRangeLabel(3);
+        mPlot.setTicksPerRangeLabel(2);
+        mPlot.setTicksPerDomainLabel(2);
+        mPlot.getGraphWidget().getGridBackgroundPaint().setColor(Color.WHITE);
         mPlot.getGraphWidget().setDomainLabelOrientation(-45);
+        mPlot.getDomainLabelWidget().getLabelPaint().setTextSize(10);
 
         mPlot.setDomainValueFormat(new Format() {
 
             // create a simple date format that draws on the year portion of our timestamp.
             // see http://download.oracle.com/javase/1.4.2/docs/api/java/text/SimpleDateFormat.html
             // for a full description of SimpleDateFormat.
-            private SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy/MM/dd");
+            private SimpleDateFormat dateFormat = new SimpleDateFormat("MM/dd    ");
 
             @Override
             public StringBuffer format(Object obj, StringBuffer toAppendTo, FieldPosition pos) {
@@ -229,10 +234,28 @@ public class RequestVisualize extends Activity  {
             }
         });
         //one mark per day
-        mPlot.setDomainStep(XYStepMode.INCREMENT_BY_VAL, 86400000);
+        double yinc = incrementy(values);
+        //mPlot.setDomainStep(XYStepMode.INCREMENT_BY_VAL, 86400000);
+        mPlot.setRangeStep(XYStepMode.INCREMENT_BY_VAL, yinc);
 
         // redraw the plot
         mPlot.redraw();
+    }
+
+    public double incrementy(ArrayList<Float> values){
+        double min = 0;
+        double max = values.get(0);
+        double returnval;
+        for(int i=0; i<values.size(); i++){
+            if(values.get(i) < min){
+                min = values.get(i);
+            }
+            if (values.get(i)>max){
+                max = values.get(i);
+            }
+        }
+        returnval = max/5;
+        return returnval;
     }
 
     @Override
@@ -261,8 +284,8 @@ public class RequestVisualize extends Activity  {
         super.onStop();
     }
 
-    private Pair<ArrayList<Number>, ArrayList<Number>> getValues(){
-        ArrayList<Number> values = new ArrayList<Number>();
+    private Pair<ArrayList<Float>, ArrayList<Number>> getValues(){
+        ArrayList<Float> values = new ArrayList<Float>();
         ArrayList<Number> dates = new ArrayList<Number>();
         String dateString;
         Date date;
@@ -306,7 +329,7 @@ public class RequestVisualize extends Activity  {
 
             } while (c.moveToNext());
         }
-        Pair<ArrayList<Number>, ArrayList<Number>> returnPair = new Pair(values,dates);
+        Pair<ArrayList<Float>, ArrayList<Number>> returnPair = new Pair(values,dates);
         return returnPair;
 
     }
