@@ -257,13 +257,6 @@ public class RequestVisualize extends Activity implements DatePickerFragment.OnD
     }
 
 
-    private String convertMeasurementString(String measurementString){
-        String newString = "";
-        newString = measurementString.replace("_", " ");
-        newString = newString.replace("$", ": ");
-        return newString;
-    }
-
     /**
      * Helper function to build the table spinner. It has to figure out what tables are in the
      * database and allow users to select them.

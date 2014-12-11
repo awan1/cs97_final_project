@@ -73,6 +73,9 @@ public class RequestImport extends Activity implements DatePickerFragment.OnDate
     private int mEndDay;
     private int mEndYear;
 
+    private long mTime;
+    private int mDSUcount;
+
     private static final String TAG = "RequestImport";
 
 
@@ -260,7 +263,6 @@ public class RequestImport extends Activity implements DatePickerFragment.OnDate
                 picker.show(getFragmentManager(), "datePicker");
             }
         }
-
         );
     }
 
