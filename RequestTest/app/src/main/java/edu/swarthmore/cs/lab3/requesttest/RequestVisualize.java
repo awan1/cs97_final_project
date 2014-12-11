@@ -40,7 +40,7 @@ import java.util.List;
 /**
  * Created by awan1 on 11/23/14.
  */
-public class RequestVisualize extends Activity  {
+public class RequestVisualize extends Activity implements DatePickerFragment.OnDateSetListener {
 
     private Spinner mTableSpinner;
     private Spinner mVisualizationSpinner;
@@ -58,6 +58,9 @@ public class RequestVisualize extends Activity  {
     private String mMeasureName;
     private Spinner mAnalysisSpinner;
     private String mAnalysisName;
+
+    private Button mStartDateButton;
+    private Button mEndDateButton;
 
     private int mStartMonth; //months are 0-based
     private int mStartDay;
@@ -82,6 +85,12 @@ public class RequestVisualize extends Activity  {
         mVisualizeButton = (Button) findViewById(R.id.make_visualization_button);
         //mPlot = (XYPlot) findViewById(R.id.visualization_plot);
 
+        //set up start date and end date buttons
+        setStartDateOnView();
+        setEndDateOnView();
+        addStartListenerOnButton();
+        addEndListenerOnButton();
+
         buildTableSpinner();
         buildVisualizationSpinner();
 
@@ -95,13 +104,29 @@ public class RequestVisualize extends Activity  {
                     String text = "Please select a visualization type.";
                     Toast.makeText(getApplicationContext(), text, Toast.LENGTH_SHORT).show();
                 } else {
+                    Bundle args = new Bundle();
+                    String startDate = dateToString(mStartYear, mStartMonth, mStartDay);
+                    String endDate = dateToString(mEndYear, mEndMonth, mEndDay);
+                    args.putString("startDate", startDate.toString());
+                    args.putString("endDate", endDate.toString());
+                    args.putString("tableName", mTableName);
+                    args.putString("deviceType", mDeviceType);
+                    args.putString("measureType", mMeasureName);
+                    args.putString("analysis", mAnalysisName);
+                    args.putString("visualization", mVisualizationName);
                     Intent intent = new Intent(RequestVisualize.this, RequestVisualizeView.class);
+                    intent.putExtras(args);
                     startActivityForResult(intent, 0);
+
                     Log.d(TAG, "plot should be generated");
                     //doPlot();
                 }
             }
         });
+    }
+
+    public String dateToString(int year, int month, int day){
+        return String.format("%d-%02d-%02d", year, month+1, day);
     }
 
     public void makeDeviceTypeSpinner(){
@@ -434,76 +459,6 @@ public class RequestVisualize extends Activity  {
         });
     }
 
-    /**
-     * Helper function that generates the visualizations.
-     */
-    private void doPlot() {
-        // Set labels
-        mPlot.setTitle(mVisualizationName + " plot for " + mTableName);
-        mDomain = "Date";
-        mRange = mTableName + " (";
-
-        // Create a couple arrays of y-values to mPlot:
-        Pair<ArrayList<Number>, ArrayList<Number>> valuePair = getValues();
-        ArrayList<Number> values = valuePair.first;
-        ArrayList<Number> dates = valuePair.second;
-        Log.i(TAG, "values array: "+ values.toString() );
-        Log.i(TAG, "dates array: " + dates.toString());
-
-        mPlot.setDomainLabel(mDomain);
-        mPlot.setRangeLabel(mRange);
-
-        // Turn the above arrays into XYSeries':
-        XYSeries series1 = new SimpleXYSeries(
-                 dates,
-                //Arrays.asList(series1Numbers),          // SimpleXYSeries takes a List so turn our array into a List
-                values, // Y_VALS_ONLY means use the element index as the x value
-                "Series1");                             // Set the display title of the series
-
-
-        // Create a formatter to use for drawing a series using LineAndPointRenderer
-        // and configure it from xml:
-        LineAndPointFormatter series1Format = new LineAndPointFormatter();
-        series1Format.setPointLabelFormatter(new PointLabelFormatter());
-        series1Format.configure(getApplicationContext(),
-                R.xml.line_point_formatter_with_plf1);
-
-        // add a new series' to the xyplot:
-        mPlot.addSeries(series1, series1Format);
-
-        // reduce the number of range labels
-        mPlot.setTicksPerRangeLabel(2);
-        mPlot.getGraphWidget().setDomainLabelOrientation(-45);
-
-        mPlot.setDomainValueFormat(new Format() {
-
-            // create a simple date format that draws on the year portion of our timestamp.
-            // see http://download.oracle.com/javase/1.4.2/docs/api/java/text/SimpleDateFormat.html
-            // for a full description of SimpleDateFormat.
-            private SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy/MM/dd");
-
-            @Override
-            public StringBuffer format(Object obj, StringBuffer toAppendTo, FieldPosition pos) {
-
-                // because our timestamps are in seconds and SimpleDateFormat expects milliseconds
-                // we multiply our timestamp by 1000:
-                long timestamp = ((Number) obj).longValue();
-                Date date = new Date(timestamp);
-                return dateFormat.format(date, toAppendTo, pos);
-            }
-
-            @Override
-            public Object parseObject(String source, ParsePosition pos) {
-                return null;
-            }
-        });
-        //one mark per day
-        mPlot.setDomainStep(XYStepMode.INCREMENT_BY_VAL, 86400000);
-
-        // redraw the plot
-        mPlot.redraw();
-    }
-
     @Override
     public boolean onCreateOptionsMenu (Menu menu){
         // Inflate the menu; this adds items to the action bar if it is present.
@@ -528,51 +483,5 @@ public class RequestVisualize extends Activity  {
         Intent return_intent = new Intent(RequestVisualize.this, RequestMain.class);
         setResult(Activity.RESULT_OK, return_intent);
         super.onStop();
-    }
-
-    private Pair<ArrayList<Number>, ArrayList<Number>> getValues(){
-
-        ArrayList<Number> values = new ArrayList<Number>();
-        ArrayList<Number> dates = new ArrayList<Number>();
-
-        String dateString;
-        Date date;
-        long dateInMs;
-        int set = 0;
-
-        Calendar calendar = Calendar.getInstance();
-        SQLiteDatabase db = mDbHelper.getWritableDatabase();
-        //could get these values from a spinner
-        String dateStart = "2014-01-01";
-        String dateEnd = "2014-01-07";
-        //Cursor c = mDbHelper.selectSpecifcItems(db, mTableName, "Test", dateStart, dateEnd, );
-        //chose between MAX, MIN, COUNT, AVG,
-        Cursor c = mDbHelper.selectSpecificItems(db, mTableName, "Fitbit", dateStart, dateEnd, "AVG", "blood_glucose$value");
-        if (c.moveToFirst() ){
-            String[] columnNames = c.getColumnNames();
-            do {
-                for (String name: columnNames) {
-                    if(name.equals("Date")){
-                        dateString = c.getString(c.getColumnIndex(name));
-                        SimpleDateFormat  format = new SimpleDateFormat("yyyy-MM-dd");
-                        try{
-                            date = format.parse(dateString);
-                            calendar.setTime(date);
-                            dateInMs = calendar.getTimeInMillis();
-                            Log.i(TAG, "DATE: " + date.toString());
-                            dates.add(dateInMs);
-                        } catch (ParseException e) {
-                            e.printStackTrace();
-                        }
-                    } else {
-                        values.add(c.getFloat(c.getColumnIndex(name)));
-                    }
-                }
-
-            } while (c.moveToNext());
-        }
-        Pair<ArrayList<Number>, ArrayList<Number>> returnPair = new Pair(values,dates);
-        return returnPair;
-
     }
 }

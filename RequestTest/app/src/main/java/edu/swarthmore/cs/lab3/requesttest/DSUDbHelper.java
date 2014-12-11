@@ -225,7 +225,7 @@ public class DSUDbHelper extends SQLiteOpenHelper {
         String command;
 
         String deviceQuery = "";
-        if (deviceType.equals(ALL_DEVICES)){
+        if (!deviceType.equals(ALL_DEVICES)){
             deviceQuery = MessageFormat.format("{0}=\"{1}\" AND",
                     DSUDbContract.TableEntry.DEVICE_COLUMN_NAME,
                     deviceType

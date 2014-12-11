@@ -1,6 +1,7 @@
 package edu.swarthmore.cs.lab3.requesttest;
 
 import android.app.Activity;
+import android.content.Context;
 import android.content.Intent;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
@@ -38,6 +39,12 @@ public class RequestVisualizeView extends Activity {
     private String mRange;
     private String mDomain;
 
+    private String mStartDate;
+    private String mEndDate;
+    private String mDeviceType;
+    private String mMeasureName;
+    private String mAnalysisName;
+
     private static final String TAG = "RequestVisualizeView";
 
     @Override
@@ -45,10 +52,36 @@ public class RequestVisualizeView extends Activity {
         super.onCreate(savedInstanceState);
         Log.d(TAG, "RequestVisualizeView.onCreate called");
         setContentView(R.layout.activity_request_visualize_view);
-        //doPlot();
+        mPlot = (XYPlot) findViewById(R.id.visualization_plot);
+
+        // Get the SQL database interface
+        Context myContext = RequestVisualizeView.this;
+        mDbHelper = DSUDbHelper.getInstance(myContext);
+
+        Bundle args = getIntent().getExtras();
+        mStartDate = args.getString("startDate");
+        mEndDate = args.getString("endDate");
+        mTableName = args.getString("tableName");
+        mDeviceType = args.getString("deviceType");
+        mMeasureName = args.getString("measureType");
+        mAnalysisName = args.getString("analysis");
+        mVisualizationName = args.getString("visualization");
+
+        Log.d(TAG, "startDate" + mStartDate);
+        Log.d(TAG, "endDate" + mEndDate);
+        Log.d(TAG, "mTableName" + mTableName);
+        Log.d(TAG, "mDeviceType" + mDeviceType);
+        Log.d(TAG, "mMeasureName" + mMeasureName);
+        Log.d(TAG, "mAnalysisName" + mAnalysisName);
+        Log.d(TAG, "mVisualizationName" + mVisualizationName);
+
+        doPlot();
     }
 
+
+
     private void doPlot() {
+
         // Set labels
         mPlot.setTitle(mVisualizationName + " plot for " + mTableName);
         mDomain = "Date";
@@ -124,16 +157,11 @@ public class RequestVisualizeView extends Activity {
         String dateString;
         Date date;
         long dateInMs;
-        int set = 0;
 
         Calendar calendar = Calendar.getInstance();
         SQLiteDatabase db = mDbHelper.getWritableDatabase();
-        //could get these values from a spinner
-        String dateStart = "2014-01-01";
-        String dateEnd = "2014-01-07";
-        //Cursor c = mDbHelper.selectSpecifcItems(db, mTableName, "Test", dateStart, dateEnd, );
-        //chose between MAX, MIN, COUNT, AVG,
-        Cursor c = mDbHelper.selectSpecificItems(db, mTableName, "Fitbit", dateStart, dateEnd, "AVG", "blood_glucose$value");
+        //Cursor c = mDbHelper.selectSpecificItems(db, mTableName, mDeviceType, mStartDate, mEndDate, mAnalysisName, mMeasureName);
+        Cursor c = mDbHelper.selectSpecificItems(db, "blood_glucose", "Fitbit", "2014-01-01", "2014-01-07", "AVG", "blood_glucose$value");
         if (c.moveToFirst() ){
             String[] columnNames = c.getColumnNames();
             do {
