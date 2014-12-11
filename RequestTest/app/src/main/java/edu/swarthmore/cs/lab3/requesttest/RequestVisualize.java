@@ -1,6 +1,7 @@
 package edu.swarthmore.cs.lab3.requesttest;
 
 import android.app.Activity;
+import android.app.DialogFragment;
 import android.content.Context;
 import android.content.Intent;
 import android.database.Cursor;
@@ -40,7 +41,7 @@ import java.util.List;
 /**
  * Created by awan1 on 11/23/14.
  */
-public class RequestVisualize extends Activity  {
+public class RequestVisualize extends Activity implements DatePickerFragment.OnDateSetListener {
 
     private Spinner mTableSpinner;
     private Spinner mVisualizationSpinner;
@@ -48,10 +49,26 @@ public class RequestVisualize extends Activity  {
     private String mVisualizationName;
     private Button mVisualizeButton;
     private DSUDbHelper mDbHelper;
-    private XYPlot mPlot;
+
     private static final String TAG = "RequestVisualize";
-    private String mRange;
-    private String mDomain;
+
+    private Spinner mDeviceTypeSpinner;
+    private String mDeviceType;
+    private Spinner mMeasureSpinner;
+    private String mMeasureName;
+    private Spinner mAnalysisSpinner;
+    private String mAnalysisName;
+
+    private Button mStartDateButton;
+    private Button mEndDateButton;
+
+    private int mStartMonth; //months are 0-based
+    private int mStartDay;
+    private int mStartYear;
+
+    private int mEndMonth; //months are 0-based
+    private int mEndDay;
+    private int mEndYear;
 
 
     @Override
@@ -66,11 +83,16 @@ public class RequestVisualize extends Activity  {
 
         // Find components
         mVisualizeButton = (Button) findViewById(R.id.make_visualization_button);
-        mPlot = (XYPlot) findViewById(R.id.visualization_plot);
-        mPlot.getGraphWidget().getGridBackgroundPaint().setColor(Color.WHITE);
+
+        //set up start date and end date buttons
+        setStartDateOnView();
+        setEndDateOnView();
+        addStartListenerOnButton();
+        addEndListenerOnButton();
 
         buildTableSpinner();
         buildVisualizationSpinner();
+
         mVisualizeButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -81,11 +103,279 @@ public class RequestVisualize extends Activity  {
                     String text = "Please select a visualization type.";
                     Toast.makeText(getApplicationContext(), text, Toast.LENGTH_SHORT).show();
                 } else {
-                    doPlot();
+                    Bundle args = new Bundle();
+                    String startDate = dateToString(mStartYear, mStartMonth, mStartDay);
+                    String endDate = dateToString(mEndYear, mEndMonth, mEndDay);
+                    args.putString("startDate", startDate.toString());
+                    args.putString("endDate", endDate.toString());
+                    args.putString("tableName", mTableName);
+                    args.putString("deviceType", mDeviceType);
+                    args.putString("measureType", mMeasureName);
+                    args.putString("analysis", mAnalysisName);
+                    args.putString("visualization", mVisualizationName);
+                    Intent intent = new Intent(RequestVisualize.this, RequestVisualizeView.class);
+                    intent.putExtras(args);
+                    startActivityForResult(intent, 0);
+
+                    Log.d(TAG, "plot should be generated");
+                    //doPlot();
                 }
             }
         });
     }
+
+    public String dateToString(int year, int month, int day){
+        return String.format("%d-%02d-%02d", year, month+1, day);
+    }
+
+    public void makeDeviceTypeSpinner(){
+        mDeviceTypeSpinner = (Spinner) findViewById(R.id.device_type_spinner);
+        // Figure out the names of tables in the database
+        final ArrayList<String> tableArray = new ArrayList<String>();
+
+        SQLiteDatabase db = mDbHelper.getWritableDatabase();
+        String command = MessageFormat.format(
+                "SELECT DISTINCT {0} FROM {1}",
+                DSUDbContract.TableEntry.DEVICE_COLUMN_NAME,
+                mTableName
+        );
+
+        tableArray.add("All Devices");
+        Cursor c = db.rawQuery(command, null);
+        if (c.moveToFirst() ){
+            String[] columnNames = c.getColumnNames();
+            //Log.d(TAG, "columnNames: " + columnNames.toString());
+            do {
+                for (String name: columnNames) {
+                    tableArray.add(c.getString(c.getColumnIndex(name)));
+                }
+            } while (c.moveToNext());
+        }
+        c.close();
+
+        // Create an ArrayAdapter using the string array and a default spinner layout
+        ArrayAdapter<String> adapter = new ArrayAdapter<String>(this,
+                android.R.layout.simple_spinner_item, tableArray);
+        // Specify the layout to use when the list of choices appears
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        // Apply the adapter to the spinner
+        mDeviceTypeSpinner.setAdapter(adapter);
+
+        mDeviceTypeSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                mDeviceType = parent.getItemAtPosition(position).toString();
+                String msg = mDeviceType;
+                Log.d(TAG, msg);
+            }
+
+            @Override
+            public void onNothingSelected(AdapterView<?> parent) {
+                mDeviceType = null;
+                String msg = mDeviceType;
+                Log.d(TAG, msg);
+            }
+        });
+    }
+
+    public void onDateSetChangeDate(int year, int month, int day, boolean start){
+        if (start) {
+            mStartDay = day;
+            mStartMonth = month;
+            mStartYear = year;
+        } else {
+            mEndDay = day;
+            mEndMonth = month;
+            mEndYear = year;
+        }
+    }
+
+    public void setStartDateOnView() {
+        mStartDateButton = (Button) findViewById(R.id.select_start_date_button);
+
+        mStartMonth = 0; //months are 0-based
+        mStartDay = 1;
+        mStartYear = 2014;
+
+        // set current date into textview
+        mStartDateButton.setText(new StringBuilder()
+                // Month is 0 based, just add 1
+                .append(mStartMonth+1).append("-").append(mStartDay).append("-")
+                .append(mStartYear).append(" "));
+    }
+
+    public void setEndDateOnView() {
+        mEndDateButton = (Button) findViewById(R.id.select_end_date_button);
+
+        mEndMonth = 0; //months are 0-based
+        mEndDay = 1;
+        mEndYear = 2014;
+
+        // set current date into textview
+        mEndDateButton.setText(new StringBuilder()
+                // Month is 0 based, just add 1
+                .append(mEndMonth+1).append("-").append(mEndDay).append("-")
+                .append(mEndYear).append(" "));
+    }
+
+    public void addStartListenerOnButton() {
+        //Log.d(TAG, "addListenerOnButton: "+String.valueOf(mStartYear)+String.valueOf(mStartMonth)+String.valueOf(mStartDay));
+        mStartDateButton.setOnClickListener(new View.OnClickListener() {
+                                                @Override
+                                                public void onClick(View v) {
+                                                    Bundle args = new Bundle();
+                                                    args.putInt("day", mStartDay);
+                                                    args.putInt("month", mStartMonth);
+                                                    args.putInt("year", mStartYear);
+                                                    args.putBoolean("start", true);
+                                                    DialogFragment picker = new DatePickerFragment();
+                                                    picker.setArguments(args);
+                                                    picker.show(getFragmentManager(), "datePicker");
+                                                }
+                                            }
+
+        );
+    }
+
+    public void addEndListenerOnButton() {
+        //Log.d(TAG, "addListenerOnButton: "+String.valueOf(mStartYear)+String.valueOf(mStartMonth)+String.valueOf(mStartDay));
+        mEndDateButton.setOnClickListener(new View.OnClickListener() {
+                                              @Override
+                                              public void onClick(View v) {
+                                                  Bundle args = new Bundle();
+                                                  args.putInt("day", mEndDay);
+                                                  args.putInt("month", mEndMonth);
+                                                  args.putInt("year", mEndYear);
+                                                  args.putBoolean("start", false);
+                                                  DialogFragment picker = new DatePickerFragment();
+                                                  picker.setArguments(args);
+                                                  picker.show(getFragmentManager(), "datePicker");
+                                              }
+                                          }
+
+        );
+    }
+
+
+    private String convertMeasurementString(String measurementString){
+        String newString = "";
+        newString = measurementString.replace("_", " ");
+        newString = newString.replace("$", ": ");
+        return newString;
+    }
+
+    /**
+     * Helper function to build the table spinner. It has to figure out what tables are in the
+     * database and allow users to select them.
+     * TODO: this makes me sad but this is an exact copy from RequestView. I couldn't figure out how
+     *  to refactor this code since it sets lots of local variables...
+     */
+    private void buildMeasureTypeSpinner() {
+        mMeasureSpinner = (Spinner) findViewById(R.id.measure_spinner);
+        // Figure out the names of tables in the database
+        final ArrayList<String> tableArray = new ArrayList<String>();
+        String tableName;
+
+        SQLiteDatabase db = mDbHelper.getWritableDatabase();
+        String command = "PRAGMA table_info(" + mTableName + ")";
+        Cursor c = db.rawQuery(command, null);
+        if (c.moveToFirst()){
+            while (!c.isAfterLast()){
+                tableName = c.getString(c.getColumnIndex("name"));
+                if (tableName.equals(tableName.toLowerCase()) && !tableName.equals(DSUDbContract.TableEntry._ID)) {
+                    //String revisedTableName = convertMeasurementString(tableName);
+                    //tableArray.add(revisedTableName);
+                    tableArray.add(tableName);
+                }
+                c.moveToNext();
+            }
+        }
+        c.close();
+
+        for (int i = 0; i < tableArray.size(); i++){
+            Log.d(TAG, "BUILDING MEASURE SPINNER: " + tableArray.get(i));
+        }
+
+        // Create an ArrayAdapter using the string array and a default spinner layout
+        ArrayAdapter<String> adapter = new ArrayAdapter<String>(this,
+                android.R.layout.simple_spinner_item, tableArray);
+        // Specify the layout to use when the list of choices appears
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        // Apply the adapter to the spinner
+        mMeasureSpinner.setAdapter(adapter);
+
+        mMeasureSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                mMeasureName = parent.getItemAtPosition(position).toString();
+                String msg = mMeasureName;
+                buildAnalysisSpinner();
+                Log.d(TAG, msg);
+            }
+
+            @Override
+            public void onNothingSelected(AdapterView<?> parent) {
+                mMeasureName = null;
+                String msg = mMeasureName;
+                Log.d(TAG, msg);
+            }
+        });
+    }
+
+    private void buildAnalysisSpinner() {
+        mAnalysisSpinner = (Spinner) findViewById(R.id.analysis_spinner);
+        // Figure out the names of tables in the database
+        final ArrayList<String> tableArray = new ArrayList<String>();
+        String tableName;
+        String measureType = "";
+
+        SQLiteDatabase db = mDbHelper.getWritableDatabase();
+        String command = "PRAGMA table_info(" + mTableName + ")";
+        Cursor c = db.rawQuery(command, null);
+
+        if (c.moveToFirst()){
+            while (!c.isAfterLast()){
+                tableName = c.getString(c.getColumnIndex("name"));
+                if (tableName.equals(mMeasureName)) {
+                    measureType = c.getString(c.getColumnIndex("type"));
+                    break;
+                }
+                c.moveToNext();
+            }
+        }
+        c.close();
+
+        if (measureType.equals("DOUBLE")){
+            tableArray.addAll(Arrays.asList("AVG","TOTAL","MIN","MAX","COUNT"));
+        } else {
+            tableArray.add("COUNT");
+        }
+
+        // Create an ArrayAdapter using the string array and a default spinner layout
+        ArrayAdapter<String> adapter = new ArrayAdapter<String>(this,
+                android.R.layout.simple_spinner_item, tableArray);
+        // Specify the layout to use when the list of choices appears
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        // Apply the adapter to the spinner
+        mAnalysisSpinner.setAdapter(adapter);
+
+        mAnalysisSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                mAnalysisName = parent.getItemAtPosition(position).toString();
+                String msg = mAnalysisName;
+                Log.d(TAG, msg);
+            }
+
+            @Override
+            public void onNothingSelected(AdapterView<?> parent) {
+                mAnalysisName = null;
+                String msg = mAnalysisName;
+                Log.d(TAG, msg);
+            }
+        });
+    }
+
     /**
      * Helper function to build the table spinner. It has to figure out what tables are in the
      * database and allow users to select them.
@@ -124,6 +414,8 @@ public class RequestVisualize extends Activity  {
             public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
                 mTableName = parent.getItemAtPosition(position).toString();
                 String msg = mTableName;
+                makeDeviceTypeSpinner();
+                buildMeasureTypeSpinner();
                 Log.d(TAG, msg);
             }
 
@@ -166,98 +458,6 @@ public class RequestVisualize extends Activity  {
         });
     }
 
-    /**
-     * Helper function that generates the visualizations.
-     */
-    private void doPlot() {
-        // Set labels
-        mPlot.setTitle(mVisualizationName + " plot for " + mTableName);
-        mDomain = "Date";
-        mRange = mTableName+ " (";
-
-        // Create a couple arrays of y-values to mPlot:
-        Pair<ArrayList<Float>, ArrayList<Number>> valuePair = getValues();
-        ArrayList<Float> values = valuePair.first;
-        ArrayList<Number> dates = valuePair.second;
-        Log.i(TAG, "values array: "+values.toString() );
-        Log.i(TAG, "dates array: " + dates.toString());
-
-        mPlot.setDomainLabel(mDomain);
-        mPlot.setRangeLabel(mRange);
-
-        // Turn the above arrays into XYSeries':
-        XYSeries series1 = new SimpleXYSeries(
-                 dates,
-                values,
-                mTableName);
-
-
-        // Create a formatter to use for drawing a series using LineAndPointRenderer
-        // and configure it from xml:
-        LineAndPointFormatter series1Format = new LineAndPointFormatter(Color.GREEN, Color.GREEN, null, null);
-        //LineAndPointFormatter series1Format = new LineAndPointFormatter();
-        //series1Format.setPointLabelFormatter(new PointLabelFormatter());
-        //series1Format.configure(getApplicationContext(),
-                //R.xml.line_point_formatter_with_plf1);
-
-        // add a new series' to the xyplot:
-        mPlot.addSeries(series1, series1Format);
-
-        // reduce the number of range labels
-        mPlot.setTicksPerRangeLabel(2);
-        mPlot.setTicksPerDomainLabel(2);
-        mPlot.getGraphWidget().getGridBackgroundPaint().setColor(Color.WHITE);
-        mPlot.getGraphWidget().setDomainLabelOrientation(-45);
-        mPlot.getDomainLabelWidget().getLabelPaint().setTextSize(10);
-
-        mPlot.setDomainValueFormat(new Format() {
-
-            // create a simple date format that draws on the year portion of our timestamp.
-            // see http://download.oracle.com/javase/1.4.2/docs/api/java/text/SimpleDateFormat.html
-            // for a full description of SimpleDateFormat.
-            private SimpleDateFormat dateFormat = new SimpleDateFormat("MM/dd    ");
-
-            @Override
-            public StringBuffer format(Object obj, StringBuffer toAppendTo, FieldPosition pos) {
-
-                // because our timestamps are in seconds and SimpleDateFormat expects milliseconds
-                // we multiply our timestamp by 1000:
-                long timestamp = ((Number) obj).longValue();
-                Date date = new Date(timestamp);
-                return dateFormat.format(date, toAppendTo, pos);
-            }
-
-            @Override
-            public Object parseObject(String source, ParsePosition pos) {
-                return null;
-
-            }
-        });
-        //one mark per day
-        double yinc = incrementy(values);
-        //mPlot.setDomainStep(XYStepMode.INCREMENT_BY_VAL, 86400000);
-        mPlot.setRangeStep(XYStepMode.INCREMENT_BY_VAL, yinc);
-
-        // redraw the plot
-        mPlot.redraw();
-    }
-
-    public double incrementy(ArrayList<Float> values){
-        double min = 0;
-        double max = values.get(0);
-        double returnval;
-        for(int i=0; i<values.size(); i++){
-            if(values.get(i) < min){
-                min = values.get(i);
-            }
-            if (values.get(i)>max){
-                max = values.get(i);
-            }
-        }
-        returnval = max/5;
-        return returnval;
-    }
-
     @Override
     public boolean onCreateOptionsMenu (Menu menu){
         // Inflate the menu; this adds items to the action bar if it is present.
@@ -284,53 +484,4 @@ public class RequestVisualize extends Activity  {
         super.onStop();
     }
 
-    private Pair<ArrayList<Float>, ArrayList<Number>> getValues(){
-        ArrayList<Float> values = new ArrayList<Float>();
-        ArrayList<Number> dates = new ArrayList<Number>();
-        String dateString;
-        Date date;
-        long dateInMs;
-        int set = 0;
-        Calendar calendar = Calendar.getInstance();
-        SQLiteDatabase db = mDbHelper.getWritableDatabase();
-        //could get these values from a spinner
-        String dateStart = "2014-01-01";
-        String dateEnd = "2014-01-07";
-        Cursor c = mDbHelper.selectItems(db,mTableName, "Test", dateStart, dateEnd);
-        if (c.moveToFirst() ){
-            String[] columnNames = c.getColumnNames();
-            do {
-                for (String name: columnNames) {
-                    if (name.contains("value")) {
-                        values.add(c.getFloat(c.getColumnIndex(name)));
-                    }
-                    if (name.contains("unit") && (set == 0)){
-                        mRange = mRange + c.getString(c.getColumnIndex(name)) + ")";
-                        set = 1;
-                    }
-                    if(name.equals("Date")){
-                        dateString = c.getString(c.getColumnIndex(name));
-                        SimpleDateFormat  format = new SimpleDateFormat("yyyy-MM-dd");
-                        try{
-                            date = format.parse(dateString);
-                            calendar.setTime(date);
-                            dateInMs = calendar.getTimeInMillis();
-                            Log.i(TAG, "DATE: " + date.toString());
-                            dates.add(dateInMs);
-                        } catch (ParseException e) {
-                            e.printStackTrace();
-                        }
-
-                    }
-
-                    //+= MessageFormat.format("{0}, ",
-                            //c.getString(c.getColumnIndex(name)));
-                }
-
-            } while (c.moveToNext());
-        }
-        Pair<ArrayList<Float>, ArrayList<Number>> returnPair = new Pair(values,dates);
-        return returnPair;
-
-    }
 }
