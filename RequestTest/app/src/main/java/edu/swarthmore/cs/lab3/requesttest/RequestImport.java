@@ -14,11 +14,13 @@ import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 
 import android.net.Uri;
+import android.nfc.Tag;
 import android.os.Build;
 
 import android.os.Bundle;
 import android.text.method.ScrollingMovementMethod;
 import android.util.Log;
+import android.util.Pair;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
@@ -38,6 +40,7 @@ import java.util.Calendar;
 
 import java.util.Date;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Random;
 import java.util.concurrent.ExecutionException;
 
@@ -213,7 +216,7 @@ public class RequestImport extends Activity implements DatePickerFragment.OnDate
         mEndDateButton = (Button) findViewById(R.id.select_end_date_button);
 
         mEndMonth = 0; //months are 0-based
-        mEndDay = 7;
+        mEndDay = 1;
         mEndYear = 2014;
 
         // set current date into textview
@@ -528,9 +531,15 @@ public class RequestImport extends Activity implements DatePickerFragment.OnDate
             Log.d(TAG, "Field_name: " + fieldName); //extract field name as string from inside "body"
             JSONArray dataArray = body.getJSONArray(fieldName); //get JSON array from "body"
             for(int i = 0; i< dataArray.length(); i++){ //iterate through array entries
+                Log.d(TAG, "dataArrayLength: " + dataArray.length());
                 temp = dataArray.getJSONObject(i);
-                //TODO: remove entry numbers and use an entry ID instead
-                createTableEntry(date, fieldName, "", temp, deviceType); //enter in table
+                List<Pair<String, String>> entryValuePairList = new ArrayList<Pair<String, String>>();
+                entryValuePairList = createTableEntry(date, fieldName, "", temp, deviceType, entryValuePairList); //enter in table
+                insertInTable2(date, fieldName, entryValuePairList, deviceType);
+                //for (int j = 0; j < entryValuePairList.size(); j++) {
+                //    Log.d(TAG, "NEW ENTRY");
+                //    Log.d(TAG, "createTableEntry: " + entryValuePairList.get(j).first + " value: " + entryValuePairList.get(j).second);
+                //}
             }
 
             Log.d(TAG, "processRequest: processed field " + fieldName);
@@ -554,11 +563,14 @@ public class RequestImport extends Activity implements DatePickerFragment.OnDate
      * @param entry: the JSON object from which the data is stored (entry is the DSU, essentially)
      * @param deviceType: The wearable (or 'Test' device) to query data for
      */
-    private void createTableEntry(String date, String tableName, String fieldName, JSONObject entry, String deviceType){
-        Log.d(TAG, "in createTableEntry");
+    private List<Pair<String, String>> createTableEntry(String date, String tableName, String fieldName, JSONObject entry, String deviceType, List<Pair<String,String>> entryValueList) {
+        //Log.d(TAG, "in createTableEntry!!");
+
         Iterator<String> fields = entry.keys();
+        List<String> entryKeys = new ArrayList<String>();
+        List<String> entryValues = new ArrayList<String>();
         String currKey;
-        while(fields.hasNext()){
+        while (fields.hasNext()) {
             currKey = fields.next();
             try {
                 String key;
@@ -568,16 +580,72 @@ public class RequestImport extends Activity implements DatePickerFragment.OnDate
                     key = fieldName + "$" + currKey;
                 }
                 if (entry.get(currKey) instanceof JSONObject) {
-                    createTableEntry(date, tableName, key, entry.getJSONObject(currKey), deviceType);
+                    Log.d(TAG, "IN HERE: key: " + key);
+                    entryValueList = createTableEntry(date, tableName, key, entry.getJSONObject(currKey), deviceType, entryValueList);
                 } else {
-                    insertInTable(date, tableName, key, entry.getString(currKey), deviceType);
+                    Pair<String, String> resultPair = new Pair<String, String>(key, entry.getString(currKey));
+                    Log.d(TAG, "key: " + key);
+                    Log.d(TAG, "value: " + entry.getString(currKey));
+                    entryValueList.add(resultPair);
+                    if (!fields.hasNext()){
+                        return entryValueList;
+                    }
+                    //entryKeys.add(key);
+                    //entryValues.add(entry.getString(currKey));
+                    //insertInTable(date, tableName, key, entry.getString(currKey), deviceType);
                 }
-            } catch (Throwable t){
+            } catch (Throwable t) {
                 Log.e(TAG, "Error in createTable while parsing: \"" + entry + "\": " + t.toString());
                 t.printStackTrace();
             }
         }
+        return entryValueList;
     }
+        //for (int i = 0; i < entryValueList.size(); i++){
+        //    Log.d(TAG, "createTableEntry: " + entryValueList.get(i).first + " value: " + entryValueList.get(i).second);
+        //}
+        //return entryValueList;
+
+    private long insertInTable2(String date, String tableName,
+                               List<Pair<String, String>> entryValuePairList, String deviceType) {
+
+        Log.d(TAG, "in insertInTable2");
+
+        ContentValues values = new ContentValues();
+        values.put(DSUDbContract.TableEntry.DATE_COLUMN_NAME, date);
+        values.put(DSUDbContract.TableEntry.DEVICE_COLUMN_NAME, deviceType);
+        boolean[] entryIsDouble = new boolean[entryValuePairList.size()];
+
+        for (int i = 0; i < entryValuePairList.size(); i++) {
+            String entry = entryValuePairList.get(i).first;
+            String value = entryValuePairList.get(i).second;
+
+            boolean valueIsDouble = false;
+            double value_double = -1;
+            // Try to make value a double, otherwise just keep it as a string
+            try {
+                value_double = Double.parseDouble(value);
+                valueIsDouble = true;
+            } catch (NumberFormatException e) {
+                // Do nothing
+            }
+            entryIsDouble[i] = valueIsDouble;
+
+            SQLiteDatabase db = mDbHelper.getWritableDatabase();
+
+            if (valueIsDouble) {
+                values.put(entry, value_double);
+            } else {
+                values.put(entry, value);
+            }
+        }
+        SQLiteDatabase db = mDbHelper.getWritableDatabase();
+        //Log.d(TAG, "addItem: tableName: (" + tableName + ") fieldName: (" + fieldName + ") values: (" + String.valueOf(values) + ")");
+        long newRowId = mDbHelper.addItem2(db, tableName, entryValuePairList, values, entryIsDouble);
+        db.close();
+        return newRowId;
+    }
+
 
     /**
      * Function to update the SQL database with a single value. This function simply tries to make

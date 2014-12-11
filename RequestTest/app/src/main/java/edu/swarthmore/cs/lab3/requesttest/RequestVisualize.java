@@ -69,6 +69,7 @@ public class RequestVisualize extends Activity  {
 
         buildTableSpinner();
         buildVisualizationSpinner();
+
         mVisualizeButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -79,6 +80,7 @@ public class RequestVisualize extends Activity  {
                     String text = "Please select a visualization type.";
                     Toast.makeText(getApplicationContext(), text, Toast.LENGTH_SHORT).show();
                 } else {
+                    Log.d(TAG, "plot should be generated");
                     doPlot();
                 }
             }
@@ -171,13 +173,13 @@ public class RequestVisualize extends Activity  {
         // Set labels
         mPlot.setTitle(mVisualizationName + " plot for " + mTableName);
         mDomain = "Date";
-        mRange = mTableName+ " (";
+        mRange = mTableName + " (";
 
         // Create a couple arrays of y-values to mPlot:
         Pair<ArrayList<Number>, ArrayList<Number>> valuePair = getValues();
         ArrayList<Number> values = valuePair.first;
         ArrayList<Number> dates = valuePair.second;
-        Log.i(TAG, "values array: "+values.toString() );
+        Log.i(TAG, "values array: "+ values.toString() );
         Log.i(TAG, "dates array: " + dates.toString());
 
         mPlot.setDomainLabel(mDomain);
@@ -202,7 +204,7 @@ public class RequestVisualize extends Activity  {
         mPlot.addSeries(series1, series1Format);
 
         // reduce the number of range labels
-        mPlot.setTicksPerRangeLabel(3);
+        mPlot.setTicksPerRangeLabel(2);
         mPlot.getGraphWidget().setDomainLabelOrientation(-45);
 
         mPlot.setDomainValueFormat(new Format() {
@@ -261,29 +263,27 @@ public class RequestVisualize extends Activity  {
     }
 
     private Pair<ArrayList<Number>, ArrayList<Number>> getValues(){
+
         ArrayList<Number> values = new ArrayList<Number>();
         ArrayList<Number> dates = new ArrayList<Number>();
+
         String dateString;
         Date date;
         long dateInMs;
         int set = 0;
+
         Calendar calendar = Calendar.getInstance();
         SQLiteDatabase db = mDbHelper.getWritableDatabase();
         //could get these values from a spinner
         String dateStart = "2014-01-01";
         String dateEnd = "2014-01-07";
-        Cursor c = mDbHelper.selectItems(db,mTableName, "Test", dateStart, dateEnd);
+        //Cursor c = mDbHelper.selectSpecifcItems(db, mTableName, "Test", dateStart, dateEnd, );
+        //chose between MAX, MIN, COUNT, AVG,
+        Cursor c = mDbHelper.selectSpecificItems(db, mTableName, "Fitbit", dateStart, dateEnd, "AVG", "blood_glucose$value");
         if (c.moveToFirst() ){
             String[] columnNames = c.getColumnNames();
             do {
                 for (String name: columnNames) {
-                    if (name.contains("value")) {
-                        values.add(c.getFloat(c.getColumnIndex(name)));
-                    }
-                    if (name.contains("unit") && (set == 0)){
-                        mRange = mRange + c.getString(c.getColumnIndex(name)) + ")";
-                        set = 1;
-                    }
                     if(name.equals("Date")){
                         dateString = c.getString(c.getColumnIndex(name));
                         SimpleDateFormat  format = new SimpleDateFormat("yyyy-MM-dd");
@@ -296,11 +296,9 @@ public class RequestVisualize extends Activity  {
                         } catch (ParseException e) {
                             e.printStackTrace();
                         }
-
+                    } else {
+                        values.add(c.getFloat(c.getColumnIndex(name)));
                     }
-
-                    //+= MessageFormat.format("{0}, ",
-                            //c.getString(c.getColumnIndex(name)));
                 }
 
             } while (c.moveToNext());
